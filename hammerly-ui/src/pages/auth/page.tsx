@@ -328,7 +328,6 @@ export default function Auth() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }
