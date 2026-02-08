@@ -1,0 +1,225 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Header from '../../components/feature/Header';
+import Footer from '../../components/feature/Footer';
+
+export default function Auth() {
+  const navigate = useNavigate();
+  const [isLogin, setIsLogin] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    agreeTerms: false,
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordMismatch, setPasswordMismatch] = useState(false);
+
+  useEffect(() => {
+    if (!isLogin && formData.confirmPassword) {
+      setPasswordMismatch(formData.password !== formData.confirmPassword);
+    } else {
+      setPasswordMismatch(false);
+    }
+  }, [formData.password, formData.confirmPassword, isLogin]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isLogin) {
+      if (!formData.agreeTerms) {
+        alert('Please agree to the Terms & Privacy Policy.');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        alert('Passwords do not match.');
+        return;
+      }
+    }
+
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('userName', formData.firstName || 'John');
+    navigate('/profile');
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#FDF8F6] via-[#F5E6E0] to-[#E8D5CF]">
+      <Header />
+      <main className="pt-24 pb-12 flex items-center justify-center min-h-screen">
+        <div className="w-full max-w-2xl mx-auto px-6">
+          <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8">
+            {/* Tab Switcher */}
+            <div className="flex bg-gray-100 rounded-full p-1 mb-6 max-w-xs mx-auto">
+              <button
+                onClick={() => setIsLogin(false)}
+                className={`flex-1 py-2.5 px-6 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap text-sm ${
+                  !isLogin ? 'bg-[#8B2635] text-white shadow-md' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Register
+              </button>
+              <button
+                onClick={() => setIsLogin(true)}
+                className={`flex-1 py-2.5 px-6 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap text-sm ${
+                  isLogin ? 'bg-[#8B2635] text-white shadow-md' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Sign In
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name Fields */}
+              {!isLogin && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">First Name</label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
+                      placeholder="First Name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Last Name</label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
+                      placeholder="Last Name"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                <div className="relative">
+                  <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
+                    placeholder="hammerly@example.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password Fields */}
+              <div className={`${isLogin ? 'grid grid-cols-1' : 'grid grid-cols-2'} gap-4`}>
+                {/* Password */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                  <div className="relative">
+                    <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="w-full pl-11 pr-11 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <i className={showPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password (only in register) */}
+                {!isLogin && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
+                    <div className="relative">
+                      <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        className={`w-full pl-11 pr-11 py-2.5 rounded-lg border ${
+                          passwordMismatch ? 'border-red-500' : 'border-gray-300'
+                        } focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm`}
+                        placeholder="••••••••"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <i className={showConfirmPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                      </button>
+                    </div>
+                    {passwordMismatch && (
+                      <p className="text-xs text-red-500 mt-1">Passwords do not match.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Terms or Forgot password */}
+              <div className="flex items-center justify-between mb-8">
+                {!isLogin ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="agreeTerms"
+                      checked={formData.agreeTerms}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 rounded border-gray-300 text-[#8B2635] focus:ring-[#8B2635] cursor-pointer"
+                      required={!isLogin}
+                    />
+                    <span className="text-sm text-gray-600 select-none">
+                      I agree to the <a className="text-[#8B2635] hover:underline">Terms</a> & <a className="text-[#8B2635] hover:underline">Privacy Policy</a>
+                    </span>
+                  </div>
+
+                ) : (
+                  <div className="text-sm text-[#8B2635] hover:underline cursor-pointer">Forgot password?</div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                className="w-full bg-[#8B2635] text-white py-3 rounded-lg font-medium hover:bg-[#7A1F2B] transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                {isLogin ? 'Sign In' : 'Create Account'}
+                <i className="ri-arrow-right-line w-5 h-5 flex items-center justify-center"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
