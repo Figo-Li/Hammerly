@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface ProfileSidebarProps {
   activeTab: string;
@@ -7,6 +8,7 @@ interface ProfileSidebarProps {
 
 export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSidebarProps) {
   const navigate = useNavigate();
+  const user = useAuthStore(state => state.user);
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
@@ -32,7 +34,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
             className="w-full h-full object-cover object-top"
           />
         </div>
-        <h3 className="text-lg font-serif font-bold text-gray-900">User 1</h3>
+        <h3 className="text-lg font-serif font-bold text-gray-900">{user.firstName} {user.lastName}</h3>
         {/* <p className="text-sm text-gray-500">Member since 2023</p>
         <div className="flex items-center justify-center gap-1 mt-2">
           <i className="ri-star-fill text-amber-400 w-4 h-4 flex items-center justify-center"></i>

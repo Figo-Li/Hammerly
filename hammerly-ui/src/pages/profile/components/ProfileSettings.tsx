@@ -1,15 +1,19 @@
 
 import { useState } from 'react';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function ProfileSettings() {
   const [activeSection, setActiveSection] = useState('profile');
+  const user = useAuthStore(state => state.user);
   const [formData, setFormData] = useState({
-    firstName: 'User',
-    lastName: '1',
-    email: 'user1@email.com',
-    phone: '+1 (123) 456-7890',
-    image: "/images/user.jpg"
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    phone: user.phone,
+    avatarImage: user.avatarImage
   });
+
+  
 
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -74,7 +78,7 @@ export default function ProfileSettings() {
           <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-100">
             <div className="w-24 h-24 rounded-full overflow-hidden">
               <img
-                src={formData.image}
+                src={formData.avatarImage}
                 alt="Profile"
                 className="w-full h-full object-cover object-top"
               />

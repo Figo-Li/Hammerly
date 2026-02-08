@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
+import { useAuthStore } from '@/store/useAuthStore';
+import { loginApi, registerApi } from '@/api/auth';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -10,6 +12,7 @@ export default function Auth() {
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     agreeTerms: false,
@@ -34,26 +37,57 @@ export default function Auth() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isLogin) {
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    try {
       if (!formData.agreeTerms) {
         alert('Please agree to the Terms & Privacy Policy.');
         return;
       }
+
       if (formData.password !== formData.confirmPassword) {
         alert('Passwords do not match.');
         return;
       }
+
+      const data = await registerApi({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      useAuthStore.getState().loginSuccess({
+        user: data.user,
+        token: data.token,
+      });
+
+      navigate('/profile');
+    } catch (err: any) {
+      alert(err?.message ?? 'Register failed');
     }
-
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('userName', formData.firstName || 'John');
-
-    
-    navigate('/profile');
   };
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    try {
+      const data = await loginApi({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      useAuthStore.getState().loginSuccess({
+        user: data.user,
+        token: data.token,
+      });
+
+      navigate('/profile');
+    } catch (err: any) {
+      alert(err?.message ?? 'Sign in failed');
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FDF8F6] via-[#F5E6E0] to-[#E8D5CF]">
@@ -81,9 +115,10 @@ export default function Auth() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name Fields */}
-              {!isLogin && (
+            {!isLogin ? (
+              // ===================== REGISTER FORM =====================
+              <form onSubmit={handleRegister} className="space-y-4">
+                {/* Name Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">First Name</label>
@@ -110,27 +145,145 @@ export default function Auth() {
                     />
                   </div>
                 </div>
-              )}
 
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-                <div className="relative">
-                  <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
-                    placeholder="hammerly@example.com"
-                    required
-                  />
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
+                      placeholder="hammerly@example.com"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Password Fields */}
-              <div className={`${isLogin ? 'grid grid-cols-1' : 'grid grid-cols-2'} gap-4`}>
+                {/* Phone Number */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <i className="ri-phone-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
+                      placeholder="+1 647 123 4567"
+                      required
+                    />
+                  </div>
+                </div>
+
+
+                {/* Password + Confirm */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                    <div className="relative">
+                      <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        className="w-full pl-11 pr-11 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
+                        placeholder="••••••••"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <i className={showPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
+                    <div className="relative">
+                      <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        className={`w-full pl-11 pr-11 py-2.5 rounded-lg border ${
+                          passwordMismatch ? 'border-red-500' : 'border-gray-300'
+                        } focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm`}
+                        placeholder="••••••••"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <i className={showConfirmPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                      </button>
+                    </div>
+                    {passwordMismatch && <p className="text-xs text-red-500 mt-1">Passwords do not match.</p>}
+                  </div>
+                </div>
+
+                {/* Terms */}
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="agreeTerms"
+                      checked={formData.agreeTerms}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 rounded border-gray-300 text-[#8B2635] focus:ring-[#8B2635] cursor-pointer"
+                      required
+                    />
+                    <span className="text-sm text-gray-600 select-none">
+                      I agree to the <a className="text-[#8B2635] hover:underline">Terms</a> &{' '}
+                      <a className="text-[#8B2635] hover:underline">Privacy Policy</a>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Register Submit */}
+                <button
+                  type="submit"
+                  className="w-full bg-[#8B2635] text-white py-3 rounded-lg font-medium hover:bg-[#7A1F2B] transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                  Create Account
+                  <i className="ri-arrow-right-line w-5 h-5 flex items-center justify-center"></i>
+                </button>
+              </form>
+            ) : (
+              // ===================== LOGIN FORM =====================
+              <form onSubmit={handleLogin} className="space-y-4">
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
+                      placeholder="hammerly@example.com"
+                      required
+                    />
+                  </div>
+                </div>
+
                 {/* Password */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
@@ -155,69 +308,23 @@ export default function Auth() {
                   </div>
                 </div>
 
-                {/* Confirm Password (only in register) */}
-                {!isLogin && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
-                    <div className="relative">
-                      <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                      <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
-                        className={`w-full pl-11 pr-11 py-2.5 rounded-lg border ${
-                          passwordMismatch ? 'border-red-500' : 'border-gray-300'
-                        } focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm`}
-                        placeholder="••••••••"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <i className={showConfirmPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
-                      </button>
-                    </div>
-                    {passwordMismatch && (
-                      <p className="text-xs text-red-500 mt-1">Passwords do not match.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Terms or Forgot password */}
-              <div className="flex items-center justify-between mb-8">
-                {!isLogin ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      name="agreeTerms"
-                      checked={formData.agreeTerms}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 rounded border-gray-300 text-[#8B2635] focus:ring-[#8B2635] cursor-pointer"
-                      required={!isLogin}
-                    />
-                    <span className="text-sm text-gray-600 select-none">
-                      I agree to the <a className="text-[#8B2635] hover:underline">Terms</a> & <a className="text-[#8B2635] hover:underline">Privacy Policy</a>
-                    </span>
-                  </div>
-
-                ) : (
+                {/* Forgot password */}
+                <div className="flex items-center justify-between mb-8">
                   <div className="text-sm text-[#8B2635] hover:underline cursor-pointer">Forgot password?</div>
-                )}
-              </div>
+                </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="w-full bg-[#8B2635] text-white py-3 rounded-lg font-medium hover:bg-[#7A1F2B] transition-all flex items-center justify-center gap-2 text-sm"
-              >
-                {isLogin ? 'Sign In' : 'Create Account'}
-                <i className="ri-arrow-right-line w-5 h-5 flex items-center justify-center"></i>
-              </button>
-            </form>
+                {/* Login Submit */}
+                <button
+                  type="submit"
+                  className="w-full bg-[#8B2635] text-white py-3 rounded-lg font-medium hover:bg-[#7A1F2B] transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                  Sign In
+                  <i className="ri-arrow-right-line w-5 h-5 flex items-center justify-center"></i>
+                </button>
+              </form>
+            )}
+
+
           </div>
         </div>
       </main>
