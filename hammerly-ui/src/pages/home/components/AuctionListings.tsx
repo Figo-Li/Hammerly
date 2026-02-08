@@ -1,5 +1,5 @@
-
-import { auctionListings, auctionStats } from '../../../mocks/auctions';
+import { useState, useEffect } from 'react';
+import { auctionApi } from '../../../services/api';
 
 // Helper function to convert timeRemaining string to minutes for sorting
 const parseTimeToMinutes = (timeStr: string): number => {
@@ -16,15 +16,38 @@ const parseTimeToMinutes = (timeStr: string): number => {
   return totalMinutes;
 };
 
-// Sort by least remaining time and take top 10
-const endingSoonAuctions = [...auctionListings]
-  .sort((a, b) => parseTimeToMinutes(a.timeRemaining) - parseTimeToMinutes(b.timeRemaining))
-  .slice(0, 10);
-
 export default function AuctionListings() {
+  const [auctions, setAuctions] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAuctions = async () => {
+      try {
+        const response = await auctionApi.getAuctions();
+        setAuctions(response.data || []);
+        setStats(response.stats || null);
+      } catch (error) {
+        console.error('Failed to fetch auctions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAuctions();
+  }, []);
+
+  const endingSoonAuctions = [...auctions]
+    .sort((a, b) => parseTimeToMinutes(a.timeRemaining) - parseTimeToMinutes(b.timeRemaining))
+    .slice(0, 10);
+
   const handleAuctionClick = (auctionId: number) => {
     window.REACT_APP_NAVIGATE(`/auction/${auctionId}`);
   };
+
+  if (loading) {
+    return <div className="py-20 text-center">Loading auctions...</div>;
+  }
 
   return (
     <section id="auctions" className="py-20 bg-gray-50">
@@ -38,7 +61,7 @@ export default function AuctionListings() {
             </h2>
           </div>
           <div className="bg-gray-800 text-white px-6 py-3 rounded-full">
-            <span className="font-semibold">{auctionStats.activeLots} Active Lots</span>
+            <span className="font-semibold">{stats?.activeLots || 0} Active Lots</span>
           </div>
         </div>
 
