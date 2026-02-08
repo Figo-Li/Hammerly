@@ -50,6 +50,8 @@ export default function Auth() {
 
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('userName', formData.firstName || 'John');
+
+    
     navigate('/profile');
   };
 

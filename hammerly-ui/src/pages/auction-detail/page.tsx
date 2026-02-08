@@ -19,9 +19,9 @@ export default function AuctionDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
-      <main className="pt-24 py-8">
+      <main className="pt-24 py-8 flex-grow">
         <div className="max-w-7xl mx-auto px-6"> 
           {/* Breadcrumb */}
           <nav className="mb-8">
