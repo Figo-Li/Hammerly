@@ -11,8 +11,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
   const user = useAuthStore(state => state.user);
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userName');
+    useAuthStore.getState().logout();
     navigate('/');
   };
 
