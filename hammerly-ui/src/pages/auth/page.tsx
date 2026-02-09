@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
+import { authApi } from '../../services/api';
 
 export default function Auth() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -32,25 +35,60 @@ export default function Auth() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+    setError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
 
-    if (!isLogin) {
-      if (!formData.agreeTerms) {
-        alert('Please agree to the Terms & Privacy Policy.');
-        return;
+    try {
+      if (!isLogin) {
+        // Register flow
+        if (!formData.agreeTerms) {
+          setError('Please agree to the Terms & Privacy Policy.');
+          setLoading(false);
+          return;
+        }
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match.');
+          setLoading(false);
+          return;
+        }
+
+        const result = await authApi.register(
+          formData.firstName,
+          formData.lastName,
+          formData.email,
+          formData.password,
+          formData.confirmPassword
+        );
+
+        if (!result.success) {
+          setError(result.message || 'Registration failed');
+          setLoading(false);
+          return;
+        }
+
+        navigate('/profile');
+      } else {
+        // Login flow
+        const result = await authApi.login(formData.email, formData.password);
+
+        if (!result.success) {
+          setError(result.message || 'Login failed');
+          setLoading(false);
+          return;
+        }
+
+        navigate('/profile');
       }
-      if (formData.password !== formData.confirmPassword) {
-        alert('Passwords do not match.');
-        return;
-      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      console.error(err);
+      setLoading(false);
     }
-
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('userName', formData.firstName || 'John');
-    navigate('/profile');
   };
 
   return (
@@ -207,13 +245,30 @@ export default function Auth() {
                 )}
               </div>
 
+              {/* Error message */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-[#8B2635] text-white py-3 rounded-lg font-medium hover:bg-[#7A1F2B] transition-all flex items-center justify-center gap-2 text-sm"
+                disabled={loading}
+                className="w-full bg-[#8B2635] text-white py-3 rounded-lg font-medium hover:bg-[#7A1F2B] transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isLogin ? 'Sign In' : 'Create Account'}
-                <i className="ri-arrow-right-line w-5 h-5 flex items-center justify-center"></i>
+                {loading ? (
+                  <>
+                    <i className="ri-loader-4-line w-5 h-5 flex items-center justify-center animate-spin"></i>
+                    {isLogin ? 'Signing In...' : 'Creating Account...'}
+                  </>
+                ) : (
+                  <>
+                    {isLogin ? 'Sign In' : 'Create Account'}
+                    <i className="ri-arrow-right-line w-5 h-5 flex items-center justify-center"></i>
+                  </>
+                )}
               </button>
             </form>
           </div>

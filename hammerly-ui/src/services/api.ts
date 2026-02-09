@@ -1,5 +1,18 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Token management
+const getToken = () => localStorage.getItem('token');
+const setToken = (token: string) => localStorage.setItem('token', token);
+const removeToken = () => localStorage.removeItem('token');
+
+const getAuthHeaders = () => {
+  const token = getToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
+
 export const auctionApi = {
   // Get all auctions
   getAuctions: async () => {
@@ -25,12 +38,12 @@ export const auctionApi = {
     }
   },
 
-  // Place a bid (skeleton for now)
+  // Place a bid (requires authentication)
   placeBid: async (auctionId: number, bidAmount: number) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/bid`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ bidAmount })
       });
       return await response.json();
@@ -43,14 +56,21 @@ export const auctionApi = {
 
 export const authApi = {
   // Register user
-  register: async (email: string, password: string) => {
+  register: async (firstName: string, lastName: string, email: string, password: string, confirmPassword: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ firstName, lastName, email, password, confirmPassword })
       });
-      return await response.json();
+      const data = await response.json();
+      
+      if (data.success && data.token) {
+        setToken(data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      
+      return data;
     } catch (error) {
       console.error('Error registering:', error);
       throw error;
@@ -65,7 +85,14 @@ export const authApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      return await response.json();
+      const data = await response.json();
+      
+      if (data.success && data.token) {
+        setToken(data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      
+      return data;
     } catch (error) {
       console.error('Error logging in:', error);
       throw error;
@@ -76,11 +103,48 @@ export const authApi = {
   logout: async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: 'POST'
+        method: 'POST',
+        headers: getAuthHeaders()
       });
-      return await response.json();
+      const data = await response.json();
+      
+      if (data.success) {
+        removeToken();
+        localStorage.removeItem('user');
+      }
+      
+      return data;
     } catch (error) {
       console.error('Error logging out:', error);
+      throw error;
+    }
+  }
+};
+
+export const usersApi = {
+  // Get current user profile
+  getProfile: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/profile`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      if (!response.ok) throw new Error('Failed to fetch profile');
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      throw error;
+    }
+  },
+
+  // Get public user info by ID
+  getUser: async (id: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${id}`);
+      if (!response.ok) throw new Error('User not found');
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching user:', error);
       throw error;
     }
   }

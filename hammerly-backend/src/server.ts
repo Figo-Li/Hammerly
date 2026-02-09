@@ -3,12 +3,17 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import auctionRoutes from './routes/auctions.js';
 import authRoutes from './routes/auth.js';
+import usersRoutes from './routes/users.js';
+import { initializeDatabase } from './db/init.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+// Initialize database
+await initializeDatabase();
 
 // Middleware
 app.use(cors({
@@ -20,6 +25,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
