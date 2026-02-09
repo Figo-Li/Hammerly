@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getOne, runQuery } from '../db/database.js';
+import { getOne, getAll, runQuery } from '../db/database.js';
 import { hashPassword, comparePassword, generateToken } from '../utils/auth.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -152,6 +152,59 @@ router.post('/logout', authMiddleware, (req: Request, res: Response) => {
     success: true,
     message: 'Logout successful'
   });
+});
+
+// GET debug endpoint - show all database tables info and last 10 rows
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    // Get all table names
+    const tables = await getAll<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+    );
+
+    const dbInfo: any = {
+      success: true,
+      tables: [],
+      totalTables: tables.length
+    };
+
+    // Get info for each table
+    for (const table of tables) {
+      const tableName = table.name;
+      
+      // Get table schema
+      const schema = await getAll<any>(`PRAGMA table_info(${tableName})`);
+      
+      // Get last 10 rows
+      const rows = await getAll<any>(`SELECT * FROM ${tableName} ORDER BY id DESC LIMIT 10`);
+      
+      // Get row count
+      const count = await getOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM ${tableName}`
+      );
+
+      dbInfo.tables.push({
+        name: tableName,
+        rowCount: count?.count || 0,
+        columns: schema.map((col: any) => ({
+          name: col.name,
+          type: col.type,
+          notnull: col.notnull,
+          primaryKey: col.pk
+        })),
+        lastRows: rows.reverse() // Show oldest first (reverse to show 10 oldest)
+      });
+    }
+
+    res.json(dbInfo);
+  } catch (error) {
+    console.error('Database info error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching database info',
+      error: (error as Error).message
+    });
+  }
 });
 
 export default router;
