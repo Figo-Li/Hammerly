@@ -4,9 +4,9 @@ import GuideHero from './components/GuideHero';
 
 export default function Guide() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
-      <main>
+      <main className='flex-grow'>
         <GuideHero />
       </main>
       <Footer />
