@@ -5,12 +5,13 @@ import { useAuthStore } from '@/store/useAuthStore';
 export default function ProfileSettings() {
   const [activeSection, setActiveSection] = useState('profile');
   const user = useAuthStore(state => state.user);
+  
   const [formData, setFormData] = useState({
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    phone: user.phone,
-    avatarImage: user.avatarImage
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    avatarImage: user?.avatarImage || '/images/user.jpg'
   });
 
   

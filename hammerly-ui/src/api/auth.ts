@@ -21,10 +21,10 @@ const mockUser = {
   password: '123456789'
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // ========== MOCK LOGIN - FOR TESTING ==========
-const USE_MOCK_LOGIN = true; // Set to false to use real backend
+const USE_MOCK_LOGIN = false; // Set to false to use real backend
 
 const fakeDelay = (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -70,16 +70,34 @@ export const registerApi = async (payload: RegisterReq): Promise<AuthResponse> =
   }
 
   try {
+    console.log('📡 Calling API:', `${API_BASE_URL}/auth/register`);
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (!response.ok) throw new Error('Registration failed');
-    return await response.json();
+    
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('❌ Failed to parse response:', parseError);
+      throw new Error(`Server error: ${response.status} ${response.statusText}`);
+    }
+    
+    if (!response.ok) {
+      throw new Error(data.message || `HTTP ${response.status}: Registration failed`);
+    }
+    
+    // Save token to localStorage
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+    }
+    return data;
   } catch (error) {
-    console.error('Error registering:', error);
-    throw error;
+    const message = error instanceof Error ? error.message : 'Registration failed - network error';
+    console.error('❌ Register error:', message);
+    throw new Error(message);
   }
 };
 
@@ -95,16 +113,34 @@ export const loginApi = async (payload: LoginReq): Promise<AuthResponse> => {
   }
 
   try {
+    console.log('📡 Calling API:', `${API_BASE_URL}/auth/login`);
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (!response.ok) throw new Error('Login failed');
-    return await response.json();
+    
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('❌ Failed to parse response:', parseError);
+      throw new Error(`Server error: ${response.status} ${response.statusText}`);
+    }
+    
+    if (!response.ok) {
+      throw new Error(data.message || `HTTP ${response.status}: Login failed`);
+    }
+    
+    // Save token to localStorage
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+    }
+    return data;
   } catch (error) {
-    console.error('Error logging in:', error);
-    throw error;
+    const message = error instanceof Error ? error.message : 'Login failed - network error';
+    console.error('❌ Login error:', message);
+    throw new Error(message);
   }
 };
 

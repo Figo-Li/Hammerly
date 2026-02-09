@@ -14,6 +14,7 @@ export type User = {
 type AuthState = {
   isLoggedIn: boolean;
   user: User | null;
+  token: string | null;
   watchedCount: number;
 
   loginSuccess: (payload: { user: User; token?: string }) => void;
@@ -29,18 +30,23 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       watchedCount: 0,
 
-      loginSuccess: ({ user}) =>
+      loginSuccess: ({ user, token }) =>
         set({
           isLoggedIn: true,
           user,
+          token: token || null,
         }),
 
-      logout: () =>
+      logout: () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('auth-store');
         set({
           isLoggedIn: false,
           user: null,
+          token: null,
           watchedCount: 0,
-        }),
+        });
+      },
 
       setWatchedCount: (count) => set({ watchedCount: count }),
     }),
