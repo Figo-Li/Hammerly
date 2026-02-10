@@ -20,6 +20,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordMismatch, setPasswordMismatch] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isLogin && formData.confirmPassword) {
@@ -38,15 +39,17 @@ export default function Auth() {
   };
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+    e.preventDefault();
+    setError('');
+    
     try {
       if (!formData.agreeTerms) {
-        alert('Please agree to the Terms & Privacy Policy.');
+        setError('Please agree to the Terms & Privacy Policy.');
         return;
       }
 
       if (formData.password !== formData.confirmPassword) {
-        alert('Passwords do not match.');
+        setError('Passwords do not match.');
         return;
       }
 
@@ -64,12 +67,15 @@ export default function Auth() {
 
       navigate('/profile');
     } catch (err: any) {
-      alert(err?.message ?? 'Register failed');
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      setError(errorMessage);
+      console.error('Register error:', err);
     }
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError('');
 
     try {
       const data = await loginApi({
@@ -84,7 +90,9 @@ export default function Auth() {
 
       navigate('/profile');
     } catch (err: any) {
-      alert(err?.message ?? 'Sign in failed');
+      const errorMessage = err instanceof Error ? err.message : 'Sign in failed';
+      setError(errorMessage);
+      console.error('Login error:', err);
     }
   };
 
@@ -98,7 +106,10 @@ export default function Auth() {
             {/* Tab Switcher */}
             <div className="flex bg-gray-100 rounded-full p-1 mb-6 max-w-xs mx-auto">
               <button
-                onClick={() => setIsLogin(false)}
+                onClick={() => {
+                  setIsLogin(false);
+                  setError('');
+                }}
                 className={`flex-1 py-2.5 px-6 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap text-sm ${
                   !isLogin ? 'bg-[#8B2635] text-white shadow-md' : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -106,7 +117,10 @@ export default function Auth() {
                 Register
               </button>
               <button
-                onClick={() => setIsLogin(true)}
+                onClick={() => {
+                  setIsLogin(true);
+                  setError('');
+                }}
                 className={`flex-1 py-2.5 px-6 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap text-sm ${
                   isLogin ? 'bg-[#8B2635] text-white shadow-md' : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -118,6 +132,11 @@ export default function Auth() {
             {!isLogin ? (
               // ===================== REGISTER FORM =====================
               <form onSubmit={handleRegister} className="space-y-4">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
                 {/* Name Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -267,6 +286,11 @@ export default function Auth() {
             ) : (
               // ===================== LOGIN FORM =====================
               <form onSubmit={handleLogin} className="space-y-4">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
                 {/* Email */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>

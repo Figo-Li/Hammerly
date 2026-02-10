@@ -8,17 +8,19 @@ import ProfileBids from './components/ProfileBids';
 import ProfileListings from './components/ProfileListings';
 import ProfileWatchlist from './components/ProfileWatchlist';
 import ProfileSettings from './components/ProfileSettings';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function Profile() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('settings');
+  const { isLoggedIn, user } = useAuthStore();
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (!isLoggedIn) {
+    // Redirect to auth if not logged in
+    if (!isLoggedIn || !user) {
       navigate('/auth');
     }
-  }, [navigate]);
+  }, [isLoggedIn, user, navigate]);
 
   const renderContent = () => {
     switch (activeTab) {
