@@ -75,30 +75,87 @@ const auctionListings = [
     condition: "Excellent",
     totalBids: 3,
     seller: "seller 4"
+  },
+  {
+    id: 7,
+    title: "Auction item 7",
+    category: "Category 2",
+    currentBid: 20000,
+    timeRemaining: "1d 12h",
+    image: "/images/picture.jpg",
+    progress: 23,
+    condition: "Excellent",
+    totalBids: 3,
+    seller: "seller 4"
+  },
+  {
+    id: 8,
+    title: "Auction item 8",
+    category: "Category 4",
+    currentBid: 20000,
+    timeRemaining: "1d 12h",
+    image: "/images/picture.jpg",
+    progress: 23,
+    condition: "Excellent",
+    totalBids: 3,
+    seller: "seller 4"
+  },
+  {
+    id: 9,
+    title: "Auction item 8",
+    category: "Category 2",
+    currentBid: 20000,
+    timeRemaining: "1d 12h",
+    image: "/images/picture.jpg",
+    progress: 23,
+    condition: "Excellent",
+    totalBids: 3,
+    seller: "seller 4"
+  },
+  {
+    id: 10,
+    title: "Auction item 10",
+    category: "Category 4",
+    currentBid: 20000,
+    timeRemaining: "1d 12h",
+    image: "/images/picture.jpg",
+    progress: 23,
+    condition: "Excellent",
+    totalBids: 3,
+    seller: "seller 4"
   }
 ];
 
 const auctionStats = {
-  activeLots: 6,
+  activeLots: 10,
   totalValue: 1200000,
   averageBid: 850,
   completedToday: 32
 };
 
-// GET all auctions
+// GET all auctions (pagination: fixed 9 per page)
 router.get('/get-all', (req: Request, res: Response) => {
+  const page = Number(req.query.page) || 1;
+  const limit = 9;  
+
+  const start = (page - 1) * limit;
+
   res.json({
     success: true,
-    data: auctionListings,
+    data: auctionListings.slice(start, start + limit),
+    total: auctionListings.length,
+    page,
+    totalPages: Math.ceil(auctionListings.length / limit),
     stats: auctionStats
   });
 });
 
+
 // GET top 4 auctions on home page
-router.get('/get-top4', (req: Request, res: Response) => {
+router.get('/get-top', (req: Request, res: Response) => {
   res.json({
     success: true,
-    data: auctionListings.slice(0, 4),
+    data: auctionListings.slice(0, 6),
     stats: auctionStats
   });
 });
@@ -129,15 +186,30 @@ router.post('/:id/bid', (req: Request, res: Response) => {
   });
 });
 
-// SEARCH auctions by title substring
+// SEARCH auctions by title substring with pagination
 router.get('/search', (req: Request, res: Response) => {
-  const { q } = req.query;
-  if (!q || typeof q !== 'string') {
-    return res.status(400).json({ success: false, message: 'Missing or invalid search query' });
+  const q = req.query.q as string;
+  const page = Number(req.query.page) || 1;
+  const limit = 9; 
+  if (!q) {
+    return res.status(400).json({
+      success: false,
+      message: 'Search query is required'
+    });
   }
   const searchTerm = q.toLowerCase();
-  const results = auctionListings.filter(item => item.title.toLowerCase().includes(searchTerm));
-  res.json({ success: true, data: results });
+  const filtered = auctionListings.filter(item =>
+    item.title.toLowerCase().includes(searchTerm)
+  );
+  const start = (page - 1) * limit;
+  res.json({
+    success: true,
+    data: filtered.slice(start, start + limit),
+    total: filtered.length,
+    page,
+    limit
+  });
 });
+
 
 export default router;
