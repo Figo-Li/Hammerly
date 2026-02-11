@@ -129,4 +129,15 @@ router.post('/:id/bid', (req: Request, res: Response) => {
   });
 });
 
+// SEARCH auctions by title substring
+router.get('/search', (req: Request, res: Response) => {
+  const { q } = req.query;
+  if (!q || typeof q !== 'string') {
+    return res.status(400).json({ success: false, message: 'Missing or invalid search query' });
+  }
+  const searchTerm = q.toLowerCase();
+  const results = auctionListings.filter(item => item.title.toLowerCase().includes(searchTerm));
+  res.json({ success: true, data: results });
+});
+
 export default router;

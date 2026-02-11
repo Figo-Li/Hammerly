@@ -6,7 +6,7 @@ export const auctionApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/auctions/get-all`);
       if (!response.ok) throw new Error('Failed to fetch auctions');
-      
+
       return await response.json();
     } catch (error) {
       console.error('Error fetching auctions:', error);
@@ -49,6 +49,18 @@ export const auctionApi = {
       return await response.json();
     } catch (error) {
       console.error('Error placing bid:', error);
+      throw error;
+    }
+  },
+
+  // Search auctions by title substring
+  searchAuctions: async (query: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auctions/search?q=${encodeURIComponent(query)}`);
+      if (!response.ok) throw new Error('Failed to search auctions');
+      return await response.json();
+    } catch (error) {
+      console.error('Error searching auctions:', error);
       throw error;
     }
   }

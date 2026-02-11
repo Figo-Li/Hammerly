@@ -23,6 +23,8 @@ export default function Auctions() {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchAuctions = async () => {
@@ -44,22 +46,83 @@ export default function Auctions() {
     fetchAuctions();
   }, []);
 
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(1);
+    setLoading(true);
+    try {
+      let response;
+      if (searchQuery.trim()) {
+        response = await auctionApi.searchAuctions(searchQuery);
+      } else {
+        response = await auctionApi.getAuctions();
+      }
+      setAuctions(response.data || []);
+      setError(null);
+    } catch {
+      setError('Failed to search auctions.');
+      setAuctions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
 
       <main className="pt-24 py-8">
         <div className="max-w-7xl mx-auto px-6">
-          {/* Title */}
+
+                    {/* Page Header */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">
-              <span className="text-black">ALL </span>
-              <span className="text-[#8B2635]">AUCTIONS</span>
-            </h1>
-            <p className="text-lg text-gray-600">
-              {loading ? 'Loading...' : `${auctions.length} items available`}
-            </p>
+            <nav className="mb-4">
+              <ol className="flex items-center space-x-2 text-sm">
+                <li><a href="/" className="text-gray-500 hover:text-gray-700 cursor-pointer">Home</a></li>
+                <li className="text-gray-300">/</li>
+                <li className="text-gray-900 font-medium">All Auctions</li>
+              </ol>
+            </nav>
+            
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h1 className="text-4xl font-bold mb-2">
+                  <span className="text-black">ALL </span>
+                  <span className="text-[#8B2635]">AUCTIONS</span>
+                </h1>
+                {loading ? 'Loading...' : `${auctions.length} items available`}
+              </div>
+              
+              {/* Search and View Toggle */}
+              <div className="flex items-center gap-4">
+                {/* Search Input */}
+                <form onSubmit={handleSearch} className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search auctions..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#8B2635] focus:border-[#8B2635] outline-none transition-all"
+                  />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-gray-400">
+                    <i className="ri-search-line"></i>
+                  </div>
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      <i className="ri-close-line"></i>
+                    </button>
+                  )}
+                </form>
+              </div>
+            </div>
           </div>
+
+
+
 
           {/* Loading State */}
           {loading && (
