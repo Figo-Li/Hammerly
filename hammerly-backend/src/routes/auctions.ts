@@ -51,18 +51,42 @@ const auctionListings = [
     condition: "Excellent",
     totalBids: 8,
     seller: "seller 1"
+  },
+  {
+    id: 5,
+    title: "Auction item 5",
+    category: "Category 3",
+    currentBid: 20000,
+    timeRemaining: "3d 12h",
+    image: "/images/picture.jpg",
+    progress: 25,
+    condition: "Excellent",
+    totalBids: 8,
+    seller: "seller 3"
+  },
+  {
+    id: 6,
+    title: "Auction item 6",
+    category: "Category 4",
+    currentBid: 20000,
+    timeRemaining: "1d 12h",
+    image: "/images/picture.jpg",
+    progress: 23,
+    condition: "Excellent",
+    totalBids: 3,
+    seller: "seller 4"
   }
 ];
 
 const auctionStats = {
-  activeLots: 4,
+  activeLots: 6,
   totalValue: 1200000,
   averageBid: 850,
   completedToday: 32
 };
 
 // GET all auctions
-router.get('/', (req: Request, res: Response) => {
+router.get('/get-all', (req: Request, res: Response) => {
   res.json({
     success: true,
     data: auctionListings,
@@ -70,8 +94,17 @@ router.get('/', (req: Request, res: Response) => {
   });
 });
 
+// GET top 4 auctions on home page
+router.get('/get-top4', (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: auctionListings.slice(0, 4),
+    stats: auctionStats
+  });
+});
+
 // GET auction by ID
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/get/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   const auction = auctionListings.find(item => item.id === parseInt(id));
 

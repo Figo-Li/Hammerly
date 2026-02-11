@@ -1,5 +1,5 @@
-
-import { auctionListings, auctionStats } from '../../../mocks/auctions';
+import { useEffect, useState } from 'react';
+import { auctionApi } from '../../../api/auctions';
 
 // Helper function to convert timeRemaining string to minutes for sorting
 const parseTimeToMinutes = (timeStr: string): number => {
@@ -16,14 +16,40 @@ const parseTimeToMinutes = (timeStr: string): number => {
   return totalMinutes;
 };
 
-// Sort by least remaining time and take top 10
-const endingSoonAuctions = [...auctionListings]
-  .sort((a, b) => parseTimeToMinutes(a.timeRemaining) - parseTimeToMinutes(b.timeRemaining))
-  .slice(0, 10);
-
 export default function AuctionListings() {
+  const [auctions, setAuctions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [auctionStats, setAuctionStats] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchTop4 = async () => {
+      try {
+        setLoading(true);
+        const response = await auctionApi.getTop4Auctions();
+        setAuctions(response.data || []);
+        setAuctionStats(response.stats || null);
+        
+        setError(null);
+      } catch  {
+        setError('Failed to load auctions.');
+        setAuctions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTop4();
+  }, []);
+
+  if (loading) return <div>Loading auctions...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
+
+  const endingSoonAuctions = [...auctions]
+    .sort((a, b) => parseTimeToMinutes(a.timeRemaining) - parseTimeToMinutes(b.timeRemaining))
+    .slice(0, 10);
+
   const handleAuctionClick = (auctionId: number) => {
-    window.REACT_APP_NAVIGATE(`/auction/${auctionId}`);
+    window.REACT_APP_NAVIGATE(`/auction/get/${auctionId}`);
   };
 
   return (

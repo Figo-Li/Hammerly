@@ -4,8 +4,9 @@ export const auctionApi = {
   // Get all auctions
   getAuctions: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auctions`);
+      const response = await fetch(`${API_BASE_URL}/auctions/get-all`);
       if (!response.ok) throw new Error('Failed to fetch auctions');
+      
       return await response.json();
     } catch (error) {
       console.error('Error fetching auctions:', error);
@@ -13,10 +14,22 @@ export const auctionApi = {
     }
   },
 
+  // Get top 4 auctions (renamed)
+  getTop4Auctions: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auctions/get-top4`); 
+      if (!response.ok) throw new Error('Failed to fetch auctions'); 
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching top 4 auctions:', error);
+      throw error;
+    }     
+  },
+
   // Get single auction by ID
   getAuctionById: async (id: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auctions/${id}`);
+      const response = await fetch(`${API_BASE_URL}/auctions/get/${id}`);
       if (!response.ok) throw new Error('Auction not found');
       return await response.json();
     } catch (error) {

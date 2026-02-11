@@ -1,18 +1,69 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
-import { auctionListings } from '../../mocks/auctions';
+import { auctionApi } from '../../api/auctions';
+
+interface Auction {
+  id: number;
+  title: string;
+  category: string;
+  currentBid: number;
+  timeRemaining: string;
+  image: string;
+  progress: number;
+  condition?: string;
+  totalBids?: number;
+  seller?: string;
+}
 
 export default function AuctionDetail() {
   const { id } = useParams();
-  const auction = auctionListings.find(item => item.id === parseInt(id || '0'));
+  const [auction, setAuction] = useState<Auction | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!auction) {
+  useEffect(() => {
+    const fetchAuction = async () => {
+      try {
+        setLoading(true);
+        const auctionId = parseInt(id || '0');
+        if (!auctionId) {
+          setError('Invalid auction ID');
+          setAuction(null);
+          return;
+        }
+        const response = await auctionApi.getAuctionById(auctionId);
+        setAuction(response.data || null);
+        setError(null);
+      } catch  {
+        setError('Failed to load auction details.');
+        setAuction(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAuction();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Loading auction details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !auction) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Auction Not Found</h1>
-          <p className="text-gray-600">The auction you're looking for doesn't exist.</p>
+          <p className="text-gray-600">{error || "The auction you're looking for doesn't exist."}</p>
         </div>
       </div>
     );
