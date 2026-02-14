@@ -1,145 +1,7 @@
 import { Router, Request, Response } from 'express';
+import { auctionListings } from '../mocks/auctions.js';
 
 const router = Router();
-
-// Mock auction data
-const auctionListings = [
-  {
-    id: 1,
-    title: "Auction item 1",
-    category: "Category 1",
-    currentBid: 40000,
-    timeRemaining: "2h 15m",
-    image: "/images/picture.jpg",
-    progress: 85,
-    condition: "Very Good",
-    totalBids: 28,
-    seller: "seller 1",
-    description: "This is a description of Auction item 1.",
-    bidHistory: [
-      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
-      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
-      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
-      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
-      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
-      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
-      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
-      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
-      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
-      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
-      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
-      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
-    ]
-  },
-  {
-    id: 2,
-    title: "Auction item 2",
-    category: "Category 1",
-    currentBid: 50000,
-    timeRemaining: "4h 30m",
-    image: "/images/picture.jpg",
-    progress: 65,
-    condition: "Good",
-    totalBids: 15,
-    seller: "seller 2"
-  },
-  {
-    id: 3,
-    title: "Auction item 3",
-    category: "Category 2",
-    currentBid: 10000,
-    timeRemaining: "1d 6h",
-    image: "/images/picture.jpg",
-    progress: 40,
-    condition: "Very Good",
-    totalBids: 22,
-    seller: "seller 3"
-  },
-  {
-    id: 4,
-    title: "Auction item 4",
-    category: "Category 3",
-    currentBid: 20000,
-    timeRemaining: "3d 12h",
-    image: "/images/picture.jpg",
-    progress: 25,
-    condition: "Excellent",
-    totalBids: 8,
-    seller: "seller 1"
-  },
-  {
-    id: 5,
-    title: "Auction item 5",
-    category: "Category 3",
-    currentBid: 20000,
-    timeRemaining: "3d 12h",
-    image: "/images/picture.jpg",
-    progress: 25,
-    condition: "Excellent",
-    totalBids: 8,
-    seller: "seller 3"
-  },
-  {
-    id: 6,
-    title: "Auction item 6",
-    category: "Category 4",
-    currentBid: 20000,
-    timeRemaining: "1d 12h",
-    image: "/images/picture.jpg",
-    progress: 23,
-    condition: "Excellent",
-    totalBids: 3,
-    seller: "seller 4"
-  },
-  {
-    id: 7,
-    title: "Auction item 7",
-    category: "Category 2",
-    currentBid: 20000,
-    timeRemaining: "1d 12h",
-    image: "/images/picture.jpg",
-    progress: 23,
-    condition: "Excellent",
-    totalBids: 3,
-    seller: "seller 4"
-  },
-  {
-    id: 8,
-    title: "Auction item 8",
-    category: "Category 4",
-    currentBid: 20000,
-    timeRemaining: "1d 12h",
-    image: "/images/picture.jpg",
-    progress: 23,
-    condition: "Excellent",
-    totalBids: 3,
-    seller: "seller 4"
-  },
-  {
-    id: 9,
-    title: "Auction item 8",
-    category: "Category 2",
-    currentBid: 20000,
-    timeRemaining: "1d 12h",
-    image: "/images/picture.jpg",
-    progress: 23,
-    condition: "Excellent",
-    totalBids: 3,
-    seller: "seller 4"
-  },
-  {
-    id: 10,
-    title: "Auction item 10",
-    category: "Category 4",
-    currentBid: 20000,
-    timeRemaining: "1d 12h",
-    image: "/images/picture.jpg",
-    progress: 23,
-    condition: "Excellent",
-    totalBids: 3,
-    seller: "seller 4"
-  }
-];
 
 const auctionStats = {
   activeLots: 10,
@@ -148,23 +10,53 @@ const auctionStats = {
   completedToday: 32
 };
 
-// GET all auctions (pagination: fixed 9 per page)
-router.get('/get-all', (req: Request, res: Response) => {
-  const page = Number(req.query.page) || 1;
-  const limit = 9;  
 
-  const start = (page - 1) * limit;
+// /**
+//  * @swagger
+//  * /api/auctions/get-all:
+//  *   get:
+//  *     tags:
+//  *       - Auctions
+//  *     summary: Get all auctions with pagination
+//  *     parameters:
+//  *       - in: query
+//  *         name: page
+//  *         schema:
+//  *           type: integer
+//  *         description: Page number for pagination
+//  *     responses:
+//  *       200:
+//  *         description: A list of auctions with pagination info
+//  */
 
-  res.json({
-    success: true,
-    data: auctionListings.slice(start, start + limit),
-    total: auctionListings.length,
-    page,
-    totalPages: Math.ceil(auctionListings.length / limit),
-    stats: auctionStats
-  });
-});
+// // GET all auctions (pagination: fixed 9 per page)
+// router.get('/get-all', (req: Request, res: Response) => {
+//   const page = Number(req.query.page) || 1;
+//   const limit = 9;  
 
+//   const start = (page - 1) * limit;
+
+//   res.json({
+//     success: true,
+//     data: auctionListings.slice(start, start + limit),
+//     total: auctionListings.length,
+//     page,
+//     totalPages: Math.ceil(auctionListings.length / limit),
+//     stats: auctionStats
+//   });
+// });
+
+/**
+ * @swagger
+ * /api/auctions/get-top:
+ *   get:
+ *     tags:
+ *       - Auctions
+ *     summary: Get top 4 auctions for the homepage
+ *     responses:
+ *       200:
+ *         description: Top 4 auctions
+ */
 
 // GET top 4 auctions on home page
 router.get('/get-top', (req: Request, res: Response) => {
@@ -175,6 +67,26 @@ router.get('/get-top', (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/auctions/get/{id}:
+ *   get:
+ *     tags:
+ *       - Auctions
+ *     summary: Get auction details by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the auction
+ *     responses:
+ *       200: 
+ *         description: detail of specific auction
+ *       404:
+ *         description: Auction not found
+ */
 // GET auction by ID
 router.get('/get/:id', (req: Request, res: Response) => {
   const { id } = req.params;
@@ -193,13 +105,77 @@ router.get('/get/:id', (req: Request, res: Response) => {
   });
 });
 
-// POST placeholder for placing a bid
-router.post('/:id/bid', (req: Request, res: Response) => {
+
+
+/**
+ * @swagger
+ * /api/auctions/get-related/{id}:
+ *   get:
+ *     tags:
+ *       - Auctions
+ *     summary: Get related auctions by item ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the auction
+ *     responses:
+ *       200: 
+ *         description: top 4 related auctions based on category
+ *       404:
+ *         description: Auction not found
+ */
+
+// GET related auctions by item ID
+router.get('/get-related/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const auction = auctionListings.find(item => item.id === parseInt(id));
+
+  if (!auction) {
+    return res.status(404).json({
+      success: false,
+      message: 'Auction not found'
+    });
+  }
+
+  const relatedItems = auctionListings
+    .filter(item => item.category === auction.category && item.id !== auction.id)
+    .slice(0, 4);
+
   res.json({
     success: true,
-    message: 'Bid functionality coming soon'
+    data: relatedItems
   });
 });
+
+
+/**
+ * @swagger
+ * /api/auctions/search:
+ *   get:
+ *     tags:
+ *       - Auctions
+ *     summary: Search auctions by title substring with pagination
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number for pagination
+ *     responses:
+ *       200:
+ *         description: A list of matching auctions
+ *       400:
+ *         description: Missing search query
+ */
 
 // SEARCH auctions by title substring with pagination
 router.get('/search', (req: Request, res: Response) => {
@@ -227,9 +203,40 @@ router.get('/search', (req: Request, res: Response) => {
 });
 
 
-// GET related auctions by item ID
-router.get('/get-related/:id', (req: Request, res: Response) => {
+/**
+ * @swagger
+ * /api/auctions/{id}/bid:
+ *   get:
+ *     tags:
+ *       - Auctions
+ *     summary: Place a bid on an auction
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the auction
+ *       - in: query
+ *         name: bidAmount
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: The amount of the bid
+ *     responses:
+ *       200:
+ *         description: Bid placed successfully
+ *       400:
+ *         description: Invalid bid amount
+ *       404:
+ *         description: Auction not found
+ */
+
+// PLACE a bid (changed to GET method)
+router.get('/:id/bid', (req: Request, res: Response) => {
   const { id } = req.params;
+  const bidAmount = Number(req.query.bidAmount);
+
   const auction = auctionListings.find(item => item.id === parseInt(id));
 
   if (!auction) {
@@ -239,14 +246,24 @@ router.get('/get-related/:id', (req: Request, res: Response) => {
     });
   }
 
-  const relatedItems = auctionListings
-    .filter(item => item.category === auction.category && item.id !== auction.id)
-    .slice(0, 4);
+  if (bidAmount <= auction.currentBid) {
+    return res.status(400).json({
+      success: false,
+      message: 'Bid amount must be higher than the current bid'
+    });
+  }
+
+  auction.currentBid = bidAmount;
+  auction.totalBids += 1;
 
   res.json({
     success: true,
-    data: relatedItems
+    message: 'Bid placed successfully',
+    data: auction
   });
 });
+
+
+
 
 export default router;

@@ -1,17 +1,17 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const auctionApi = {
-  // Get all auctions with pagination
-  getAuctions: async (page = 1) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auctions/get-all?page=${page}`);
-      if (!response.ok) throw new Error('Failed to fetch auctions');
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching auctions:', error);
-      throw error;
-    }
-  },
+  // // Get all auctions with pagination
+  // getAuctions: async (page = 1) => {
+  //   try {
+  //     const response = await fetch(`${API_BASE_URL}/auctions/search?page=${page}`);
+  //     if (!response.ok) throw new Error('Failed to fetch auctions');
+  //     return await response.json();
+  //   } catch (error) {
+  //     console.error('Error fetching auctions:', error);
+  //     throw error;
+  //   }
+  // },
 
   // Get top auctions
   getTopAuctions: async () => {

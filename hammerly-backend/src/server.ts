@@ -5,6 +5,8 @@ import auctionRoutes from './routes/auctions.js';
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
 import { initializeDatabase } from './db/init.js';
+import swaggerJsDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
 
 dotenv.config();
 
@@ -21,6 +23,43 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Swagger configuration
+const swaggerOptions = {
+  swaggerDefinition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Hammerly API',
+      version: '1.0.0',
+      description: 'API documentation for the Hammerly auction platform',
+    },
+    servers: [
+      {
+        url: 'http://localhost:5000',
+        description: 'Development server',
+      },
+    ],
+    tags: [
+      {
+        name: 'Auctions',
+        description: 'APIs related to auction operations',
+      },
+      {
+        name: 'Auth',
+        description: 'APIs related to authentication operations',
+      },
+      {
+        name: 'Users',
+        description: 'APIs related to user operations',
+      },
+    ],
+  },
+  apis: ['./src/routes/*.ts'], // Path to the API docs
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
 
 // Routes
 app.use('/api/auctions', auctionRoutes);

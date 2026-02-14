@@ -38,7 +38,7 @@ export default function Auctions() {
         if (searchQuery.trim()) {
           response = await auctionApi.searchAuctions(searchQuery);
         } else {
-          response = await auctionApi.getAuctions(currentPage);
+          response = await auctionApi.searchAuctions('');
         }
 
         setAuctions(response.data || []);
