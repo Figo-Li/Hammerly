@@ -60,6 +60,14 @@ export const auctionApi = {
       return await response.json();
     } catch (error) {
       console.error('Error searching auctions:', error);
+  // Get related auctions by item ID
+  getRelatedAuctions: async (id: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auctions/get-related/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch related auctions');
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching related auctions:', error);
       throw error;
     }
   }
