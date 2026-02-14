@@ -63,7 +63,7 @@ export default function AuctionDetail() {
             <ol className="flex items-center space-x-2 text-sm">
               <li><a href="/" className="text-gray-500 hover:text-gray-700 cursor-pointer">Home</a></li>
               <li className="text-gray-300">/</li>
-              <li><a href="/#auctions" className="text-gray-500 hover:text-gray-700 cursor-pointer">Auctions</a></li>
+              <li><a href="/auctions" className="text-gray-500 hover:text-gray-700 cursor-pointer">All auctions</a></li>
               <li className="text-gray-300">/</li>
               <li className="text-gray-900 font-medium">{auction.title}</li>
             </ol>

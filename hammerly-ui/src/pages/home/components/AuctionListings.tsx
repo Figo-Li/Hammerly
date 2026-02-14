@@ -26,7 +26,7 @@ export default function AuctionListings() {
     const fetchTop4 = async () => {
       try {
         setLoading(true);
-        const response = await auctionApi.getTop4Auctions();
+        const response = await auctionApi.getTopAuctions();
         setAuctions(response.data || []);
         setAuctionStats(response.stats || null);
         

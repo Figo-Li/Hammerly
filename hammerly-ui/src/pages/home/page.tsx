@@ -6,9 +6,9 @@ import HowItWorks from './components/HowItWorks';
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="pt-20">
+      <main className="pt-20 flex-grow">
         <AuctionListings />
         <HowItWorks />
       </main>
