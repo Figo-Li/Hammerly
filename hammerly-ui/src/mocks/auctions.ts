@@ -6,6 +6,21 @@ export const auctionStats = {
   completedToday: 32
 };
 
+export interface Auction {
+  id: number;
+  title?: string;
+  category?: string;
+  currentBid?: number;
+  timeRemaining?: string;
+  image?: string;
+  progress?: number;
+  condition?: string;
+  totalBids?: number;
+  seller?: string;
+  description?: string;
+  bidHistory?: { bidder: string; amount: number; time: string }[];
+}
+
 export const auctionListings = [
   {
     id: 1,

@@ -14,7 +14,22 @@ const auctionListings = [
     progress: 85,
     condition: "Very Good",
     totalBids: 28,
-    seller: "seller 1"
+    seller: "seller 1",
+    description: "This is a description of Auction item 1.",
+    bidHistory: [
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+    ]
   },
   {
     id: 2,
