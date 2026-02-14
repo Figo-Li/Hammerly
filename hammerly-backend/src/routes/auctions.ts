@@ -14,7 +14,22 @@ const auctionListings = [
     progress: 85,
     condition: "Very Good",
     totalBids: 28,
-    seller: "seller 1"
+    seller: "seller 1",
+    description: "This is a description of Auction item 1.",
+    bidHistory: [
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+      { bidder: 'User***2', amount: 40000, time: '2 minutes ago' },
+      { bidder: 'User***1', amount: 30000, time: '30 minutes ago' },
+    ]
   },
   {
     id: 2,
@@ -126,6 +141,28 @@ router.post('/:id/bid', (req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'Bid functionality coming soon'
+  });
+});
+
+// GET related auctions by item ID
+router.get('/get-related/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const auction = auctionListings.find(item => item.id === parseInt(id));
+
+  if (!auction) {
+    return res.status(404).json({
+      success: false,
+      message: 'Auction not found'
+    });
+  }
+
+  const relatedItems = auctionListings
+    .filter(item => item.category === auction.category && item.id !== auction.id)
+    .slice(0, 4);
+
+  res.json({
+    success: true,
+    data: relatedItems
   });
 });
 
