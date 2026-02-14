@@ -144,4 +144,26 @@ router.post('/:id/bid', (req: Request, res: Response) => {
   });
 });
 
+// GET related auctions by item ID
+router.get('/get-related/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const auction = auctionListings.find(item => item.id === parseInt(id));
+
+  if (!auction) {
+    return res.status(404).json({
+      success: false,
+      message: 'Auction not found'
+    });
+  }
+
+  const relatedItems = auctionListings
+    .filter(item => item.category === auction.category && item.id !== auction.id)
+    .slice(0, 4);
+
+  res.json({
+    success: true,
+    data: relatedItems
+  });
+});
+
 export default router;

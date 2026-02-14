@@ -1,11 +1,40 @@
-import { auctionListings } from '../../../mocks/auctions';
+import { useEffect, useState } from 'react';
+import { auctionApi } from '../../../api/auctions';
 
 interface RelatedItemsProps {
   currentId: number;
 }
 
 export default function RelatedItems({ currentId }: RelatedItemsProps) {
-  const relatedItems = auctionListings.filter(item => item.id !== currentId).slice(0, 4);
+  const [relatedItems, setRelatedItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchRelatedItems = async () => {
+      try {
+        setLoading(true);
+        const response = await auctionApi.getRelatedAuctions(currentId);
+        setRelatedItems(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch related items:', err);
+        setError('Failed to load related items. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRelatedItems();
+  }, [currentId]);
+
+  if (loading) {
+    return <p>Loading related items...</p>;
+  }
+
+  if (error) {
+    return <p>{error}</p>;
+  }
 
   return (
     <section className="mt-12 pt-12 border-t">
@@ -17,7 +46,7 @@ export default function RelatedItems({ currentId }: RelatedItemsProps) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {relatedItems.map((item) => (
+        {relatedItems.map((item: any) => (
           <div 
             key={item.id}
             className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer"
