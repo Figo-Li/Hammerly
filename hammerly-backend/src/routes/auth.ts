@@ -14,6 +14,37 @@ interface User {
   createdAt: string;
 }
 
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: User registration
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: User email
+ *               password:
+ *                 type: string
+ *                 description: User password
+ *               name:
+ *                 type: string
+ *                 description: User full name
+ *     responses:
+ *       201:
+ *         description: Registration successful
+ *       400:
+ *         description: Invalid input data
+ */
+
 // POST register
 router.post('/register', async (req: Request, res: Response) => {
   try {
@@ -90,6 +121,33 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: User login
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: User email
+ *               password:
+ *                 type: string
+ *                 description: User password
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Invalid credentials
+ */
+
 // POST login
 router.post('/login', async (req: Request, res: Response) => {
   try {
@@ -144,6 +202,19 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: User logout
+ *     description: Logs out the user by invalidating their session or token.
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ */
+
 // POST logout (client-side token removal, but we can still provide endpoint)
 router.post('/logout', authMiddleware, (req: Request, res: Response) => {
   // Token verification happens in middleware
@@ -154,6 +225,18 @@ router.post('/logout', authMiddleware, (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/auth/:
+ *   get:
+ *     tags:
+ *       - Auth
+ *     summary: Debug endpoint
+ *     description: Shows all database tables information and the last 10 rows.
+ *     responses:
+ *       200:
+ *         description: Debug information retrieved successfully
+ */
 // GET debug endpoint - show all database tables info and last 10 rows
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -206,5 +289,9 @@ router.get('/', async (req: Request, res: Response) => {
     });
   }
 });
+
+
+
+
 
 export default router;

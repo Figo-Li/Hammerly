@@ -12,6 +12,27 @@ interface User {
   createdAt: string;
 }
 
+/**
+ * @swagger
+ * /api/users/profile:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Get current user profile
+ *     description: Retrieve the profile of the currently authenticated user.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+
 // GET current user profile (requires auth)
 router.get('/profile', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -46,6 +67,30 @@ router.get('/profile', authMiddleware, async (req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Get user by ID
+ *     description: Retrieve public information of a user by their ID.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the user to retrieve
+ *     responses:
+ *       200:
+ *         description: User information retrieved successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
 
 // GET user by ID (public - for seller info)
 router.get('/:id', async (req: Request, res: Response) => {
