@@ -60,6 +60,10 @@ export const auctionApi = {
       return await response.json();
     } catch (error) {
       console.error('Error searching auctions:', error);
+      throw error;
+    }
+  },
+
   // Get related auctions by item ID
   getRelatedAuctions: async (id: number) => {
     try {
