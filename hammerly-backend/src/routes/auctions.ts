@@ -183,9 +183,14 @@ router.get('/search', (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = 9; 
   if (!q) {
-    return res.status(400).json({
-      success: false,
-      message: 'Search query is required'
+    // If no search query is provided, return all auctions with pagination
+    const start = (page - 1) * limit;
+    return res.json({
+      success: true,
+      data: auctionListings.slice(start, start + limit),
+      total: auctionListings.length,
+      page,
+      totalPages: Math.ceil(auctionListings.length / limit),
     });
   }
   const searchTerm = q.toLowerCase();

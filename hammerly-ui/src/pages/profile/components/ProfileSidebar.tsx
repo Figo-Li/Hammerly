@@ -19,7 +19,6 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
     { id: 'settings', label: 'Settings', icon: 'ri-settings-3-line' },
     { id: 'bids', label: 'My Bids', icon: 'ri-hammer-line' },
     { id: 'listings', label: 'My Sellings', icon: 'ri-store-2-line' },
-    { id: 'watchlist', label: 'Watchlist', icon: 'ri-heart-line' },
   ];
 
   return (

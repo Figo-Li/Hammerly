@@ -6,7 +6,6 @@ import Footer from '../../components/feature/Footer';
 import ProfileSidebar from './components/ProfileSidebar';
 import ProfileBids from './components/ProfileBids';
 import ProfileListings from './components/ProfileListings';
-import ProfileWatchlist from './components/ProfileWatchlist';
 import ProfileSettings from './components/ProfileSettings';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -30,8 +29,6 @@ export default function Profile() {
         return <ProfileBids />;
       case 'listings':
         return <ProfileListings />;
-      case 'watchlist':
-        return <ProfileWatchlist />;
 
       default:
         return <ProfileSettings />;
