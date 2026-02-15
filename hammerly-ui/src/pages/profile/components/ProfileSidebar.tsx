@@ -18,7 +18,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
   const menuItems = [
     { id: 'settings', label: 'Settings', icon: 'ri-settings-3-line' },
     { id: 'bids', label: 'My Bids', icon: 'ri-hammer-line' },
-    { id: 'listings', label: 'My Listings', icon: 'ri-store-2-line' },
+    { id: 'listings', label: 'My Sellings', icon: 'ri-store-2-line' },
     { id: 'watchlist', label: 'Watchlist', icon: 'ri-heart-line' },
   ];
 
@@ -43,8 +43,8 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
       </div>
 
       {/* Navigation Menu */}
-      <nav className="space-y-2">
-        {menuItems.map((item) => (
+      <nav className="space-y-2 pb-6 border-b border-gray-100">
+        {menuItems.map((item, index) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
@@ -52,7 +52,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
               activeTab === item.id
                 ? 'bg-[#8B2635] text-white'
                 : 'text-gray-600 hover:bg-gray-50'
-            }`}
+            } ${index === menuItems.length - 1 ? 'mb-4' : ''}`}
           >
             <i className={`${item.icon} text-xl w-5 h-5 flex items-center justify-center`}></i>
             <span className="font-medium">{item.label}</span>

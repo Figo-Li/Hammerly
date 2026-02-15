@@ -24,7 +24,7 @@ export default function ProfileWatchlist() {
     <div className="space-y-6">
       {watchlist.length === 0 ? (
         /* Empty State */
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <div className="bg-white rounded-xl shadow-sm p-12 text-center pt-4">
           <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="ri-heart-line text-4xl text-gray-400"></i>
           </div>
@@ -38,7 +38,7 @@ export default function ProfileWatchlist() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-4">
            watched items
         </div>
       )}
