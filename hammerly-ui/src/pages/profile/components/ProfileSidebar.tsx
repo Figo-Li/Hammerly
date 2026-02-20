@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
+import { authApi } from '@/api/auth';
 
 interface ProfileSidebarProps {
   activeTab: string;
@@ -8,11 +9,21 @@ interface ProfileSidebarProps {
 
 export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSidebarProps) {
   const navigate = useNavigate();
-  const user = useAuthStore(state => state.user);
+  const { isLoggedIn, user } = useAuthStore(); // Get login state and user from the store
 
-  const handleLogout = () => {
-    useAuthStore.getState().logout();
-    navigate('/');
+  if (!isLoggedIn) {
+    return null; // If not logged in, don't render the sidebar
+  }
+
+  const handleLogout = async () => {
+    try {
+      // await authApi.logout(); // Call the logout API
+      useAuthStore.getState().logout(); // Clear local state
+      navigate('/'); // Redirect to home page
+    } catch (error) {
+      console.error('Logout failed:', error);
+      alert('Failed to log out. Please try again.');
+    }
   };
 
   const menuItems = [
