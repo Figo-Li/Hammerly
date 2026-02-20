@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/feature/Header';
-import Footer from '../../components/feature/Footer';
+// import Footer from '../../components/feature/Footer';
 import { useAuthStore } from '@/store/useAuthStore';
 import { loginApi, registerApi } from '@/api/auth';
 
@@ -41,7 +41,7 @@ export default function Auth() {
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-    
+
     try {
       if (!formData.agreeTerms) {
         setError('Please agree to the Terms & Privacy Policy.');

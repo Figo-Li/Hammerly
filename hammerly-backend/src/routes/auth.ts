@@ -35,9 +35,15 @@ interface User {
  *               password:
  *                 type: string
  *                 description: User password
- *               name:
+ *               firstName:
  *                 type: string
- *                 description: User full name
+ *                 description: User's first name
+ *               lastName:
+ *                 type: string
+ *                 description: User's last name
+ *               confirmPassword:
+ *                 type: string
+ *                 description: Confirmation of the user password
  *     responses:
  *       201:
  *         description: Registration successful

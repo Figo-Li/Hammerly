@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
+import { authApi } from '@/api/auth';
 
 interface ProfileSidebarProps {
   activeTab: string;
@@ -8,18 +9,27 @@ interface ProfileSidebarProps {
 
 export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSidebarProps) {
   const navigate = useNavigate();
-  const user = useAuthStore(state => state.user);
+  const { isLoggedIn, user } = useAuthStore(); // Get login state and user from the store
 
-  const handleLogout = () => {
-    useAuthStore.getState().logout();
-    navigate('/');
+  if (!isLoggedIn) {
+    return null; // If not logged in, don't render the sidebar
+  }
+
+  const handleLogout = async () => {
+    try {
+      // await authApi.logout(); // Call the logout API
+      useAuthStore.getState().logout(); // Clear local state
+      navigate('/'); // Redirect to home page
+    } catch (error) {
+      console.error('Logout failed:', error);
+      alert('Failed to log out. Please try again.');
+    }
   };
 
   const menuItems = [
     { id: 'settings', label: 'Settings', icon: 'ri-settings-3-line' },
     { id: 'bids', label: 'My Bids', icon: 'ri-hammer-line' },
-    { id: 'listings', label: 'My Listings', icon: 'ri-store-2-line' },
-    { id: 'watchlist', label: 'Watchlist', icon: 'ri-heart-line' },
+    { id: 'listings', label: 'My Sellings', icon: 'ri-store-2-line' },
   ];
 
   return (
@@ -43,8 +53,8 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
       </div>
 
       {/* Navigation Menu */}
-      <nav className="space-y-2">
-        {menuItems.map((item) => (
+      <nav className="space-y-2 pb-6 border-b border-gray-100">
+        {menuItems.map((item, index) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
@@ -52,7 +62,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
               activeTab === item.id
                 ? 'bg-[#8B2635] text-white'
                 : 'text-gray-600 hover:bg-gray-50'
-            }`}
+            } ${index === menuItems.length - 1 ? 'mb-4' : ''}`}
           >
             <i className={`${item.icon} text-xl w-5 h-5 flex items-center justify-center`}></i>
             <span className="font-medium">{item.label}</span>
