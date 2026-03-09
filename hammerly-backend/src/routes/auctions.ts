@@ -737,6 +737,51 @@ router.get('/is-watched/:id', authMiddleware, async (req: Request, res: Response
 
 /**
  * @swagger
+ * /api/auctions/my-listings:
+ *   get:
+ *     tags:
+ *       - Auctions
+ *     summary: Get all auctions created by the authenticated user
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User's auction listings
+ *       401:
+ *         description: Unauthorized - no token provided
+ */
+router.get('/my-listings', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const rows = await getAll<AuctionRow>(
+      `SELECT a.*, COALESCE(u.firstName || ' ' || u.lastName, NULL) AS seller,
+              COUNT(b.id) AS totalBids
+       FROM auctions a
+       LEFT JOIN users u ON u.id = a.seller_id
+       LEFT JOIN bids b ON b.auction_id = a.id
+       WHERE a.seller_id = ?
+       GROUP BY a.id
+       ORDER BY a.createdAt DESC`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      data: rows.map(mapAuctionForClient),
+    });
+  } catch (error) {
+    console.error('Error fetching user listings:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
  * /api/auctions/create:
  *   post:
  *     tags:

@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Listing, myListings } from '../../../mocks/myListing';
+import { useState, useEffect, useCallback } from 'react';
+import { Listing } from '../../../mocks/myListing';
+import { auctionApi } from '../../../api/auctions';
 import CreateListingModal from './CreateListingModal';
 
 
@@ -19,9 +20,42 @@ export default function ProfileListings() {
   const [dispatchSuccess, setDispatchSuccess] = useState(false);
   const [dispatchedIds, setDispatchedIds] = useState<number[]>([]);
   
-  const [listings] = useState<Listing[]>(myListings);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 4;
+
+  const fetchListings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await auctionApi.getMyListings();
+      if (res?.success && Array.isArray(res.data)) {
+        setListings(res.data.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          currentBid: a.currentBid ?? 0,
+          startingPrice: a.startPrice ?? 0,
+          bids: a.totalBids ?? 0,
+          watchers: 0,
+          timeLeft: a.timeRemaining ?? '',
+          status: a.status === 'active' ? 'active' : a.status === 'ended' ? 'ended' : 'draft',
+          image: a.image || '/images/picture.jpg',
+          createdAt: a.createdAt ?? '',
+          category: a.category,
+          condition: a.condition,
+          description: a.description,
+        } as Listing)));
+      }
+    } catch (err) {
+      console.error('Failed to load listings', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchListings();
+  }, [fetchListings]);
 
   const filteredListings = listings.filter(listing => {
     if (activeFilter === 'all') return true;
@@ -38,6 +72,7 @@ export default function ProfileListings() {
   const handleCloseModal = () => {
     setShowCreateModal(false);
     setEditingListing(null);
+    fetchListings();
   };
 
   const handleEndAuction = (listingId: number) => {
@@ -118,6 +153,11 @@ export default function ProfileListings() {
       </div>
 
       {/* Listings Grid */}
+      {loading ? (
+        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+          <p className="text-gray-500">Loading your listings...</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {paginatedListings.map((listing) => (
           <div key={listing.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all">
@@ -213,8 +253,9 @@ export default function ProfileListings() {
           </div>
         ))}
       </div>
+      )}
 
-      {filteredListings.length === 0 && (
+      {!loading && filteredListings.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm p-12 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="ri-store-2-line text-3xl text-gray-400 w-8 h-8 flex items-center justify-center"></i>

@@ -192,5 +192,19 @@ export const auctionApi = {
       console.error('Error creating auction:', error);
       throw error;
     }
+  },
+
+  // Get the authenticated user's own listings
+  getMyListings: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auctions/my-listings`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      return await parseResponseOrThrow(response, 'Failed to fetch your listings');
+    } catch (error) {
+      console.error('Error fetching my listings:', error);
+      throw error;
+    }
   }
 };

@@ -1,4 +1,5 @@
-import db, { runQuery } from './database.js';
+import db, { runQuery, getOne } from './database.js';
+import { hashPassword } from '../utils/auth.js';
 
 /**
  * Safely add a column to a table (ignores error if column already exists)
@@ -104,8 +105,73 @@ export const initializeDatabase = async () => {
     `);
 
     console.log('✅ Database tables initialized successfully');
+
+    // Seed sample data if DB is empty
+    await seedDatabase();
   } catch (error) {
     console.error('❌ Error initializing database:', error);
     throw error;
   }
+};
+
+/**
+ * Seed the database with sample users and auctions (only if tables are empty)
+ */
+const seedDatabase = async () => {
+  const existingUser = await getOne<{ id: number }>('SELECT id FROM users LIMIT 1');
+  if (existingUser) return; // Already seeded
+
+  console.log('🌱 Seeding database with sample data...');
+
+  const hashedPassword = await hashPassword('password123');
+
+  // Create sample users
+  await runQuery(
+    `INSERT INTO users (firstName, lastName, email, password, phone) VALUES (?, ?, ?, ?, ?)`,
+    ['Alice', 'Johnson', 'alice@example.com', hashedPassword, '555-0101']
+  );
+  await runQuery(
+    `INSERT INTO users (firstName, lastName, email, password, phone) VALUES (?, ?, ?, ?, ?)`,
+    ['Bob', 'Smith', 'bob@example.com', hashedPassword, '555-0102']
+  );
+  await runQuery(
+    `INSERT INTO users (firstName, lastName, email, password, phone) VALUES (?, ?, ?, ?, ?)`,
+    ['Carol', 'Williams', 'carol@example.com', hashedPassword, '555-0103']
+  );
+
+  // Helper: endTime N days from now
+  const daysFromNow = (days: number) =>
+    new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+  // Sample auctions  (seller_id references the users above: 1=Alice, 2=Bob, 3=Carol)
+  const auctions = [
+    { title: 'Antique Victorian Pocket Watch', category: 'Jewelry & Watches', description: 'Beautiful 1890s gold-plated pocket watch in excellent working condition.', startPrice: 500, currentBid: 850, image: '/images/picture.jpg', condition: 'Excellent', seller_id: 1, days: 3 },
+    { title: 'Rare First Edition Novel — 1925', category: 'Books & Manuscripts', description: 'First edition hardcover with original dust jacket. Minor shelf wear.', startPrice: 1200, currentBid: 2400, image: '/images/picture.jpg', condition: 'Very Good', seller_id: 1, days: 5 },
+    { title: 'Mid-Century Modern Teak Desk', category: 'Furniture', description: 'Scandinavian design teak desk from the 1960s. Recently restored.', startPrice: 800, currentBid: 1350, image: '/images/picture.jpg', condition: 'Restored', seller_id: 2, days: 2 },
+    { title: 'Vintage Leica M3 Camera', category: 'Cameras & Photography', description: 'Classic 1954 rangefinder camera. Fully functional with minor cosmetic wear.', startPrice: 2000, currentBid: 3100, image: '/images/picture.jpg', condition: 'Good', seller_id: 2, days: 7 },
+    { title: 'Art Deco Bronze Sculpture', category: 'Art & Collectibles', description: 'Signed bronze sculpture, circa 1930. 12 inches tall.', startPrice: 600, currentBid: 950, image: '/images/picture.jpg', condition: 'Excellent', seller_id: 3, days: 4 },
+    { title: 'Persian Silk Rug — Handwoven', category: 'Rugs & Textiles', description: 'Authentic handwoven silk rug from Isfahan. 4×6 feet.', startPrice: 3000, currentBid: 4500, image: '/images/picture.jpg', condition: 'Excellent', seller_id: 3, days: 6 },
+    { title: 'Sterling Silver Tea Set', category: 'Silver & Metalware', description: 'Complete 5-piece Victorian sterling silver tea service. Hallmarked.', startPrice: 1500, currentBid: 2200, image: '/images/picture.jpg', condition: 'Very Good', seller_id: 1, days: 8 },
+    { title: 'Vintage Gibson Les Paul Guitar', category: 'Musical Instruments', description: '1959 reissue Gibson Les Paul Standard. Cherry sunburst finish.', startPrice: 4000, currentBid: 5800, image: '/images/picture.jpg', condition: 'Excellent', seller_id: 2, days: 10 },
+  ];
+
+  for (const a of auctions) {
+    await runQuery(
+      `INSERT INTO auctions (title, category, description, startPrice, currentBid, image, condition, seller_id, status, endTime)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+      [a.title, a.category, a.description, a.startPrice, a.currentBid, a.image, a.condition, a.seller_id, daysFromNow(a.days)]
+    );
+  }
+
+  // Add a few sample bids
+  await runQuery(`INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)`, [1, 2, 650]);
+  await runQuery(`INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)`, [1, 3, 850]);
+  await runQuery(`INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)`, [2, 3, 1800]);
+  await runQuery(`INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)`, [2, 2, 2400]);
+  await runQuery(`INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)`, [3, 1, 1000]);
+  await runQuery(`INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)`, [3, 3, 1350]);
+  await runQuery(`INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)`, [4, 1, 2500]);
+  await runQuery(`INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)`, [4, 3, 3100]);
+
+  console.log('✅ Seed data inserted (3 users, 8 auctions, 8 bids)');
 };
