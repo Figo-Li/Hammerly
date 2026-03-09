@@ -212,7 +212,7 @@ router.get('/search', (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auctions/{id}/bid:
+ * /api/auctions/bid/{id}:
  *   get:
  *     tags:
  *       - Auctions
@@ -240,7 +240,7 @@ router.get('/search', (req: Request, res: Response) => {
  */
 
 // PLACE a bid (changed to GET method)
-router.get('/:id/bid', (req: Request, res: Response) => {
+router.get('/bid/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   const bidAmount = Number(req.query.bidAmount);
 
@@ -272,7 +272,7 @@ router.get('/:id/bid', (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/auctions/{id}/watch:
+ * /api/auctions/watch/{id}:
  *   post:
  *     tags:
  *       - Auctions
@@ -294,7 +294,7 @@ router.get('/:id/bid', (req: Request, res: Response) => {
  *       401:
  *         description: Unauthorized - no token provided
  */
-router.post('/:id/watch', authMiddleware, async (req: Request, res: Response) => {
+router.post('/watch/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
@@ -307,6 +307,36 @@ router.post('/:id/watch', authMiddleware, async (req: Request, res: Response) =>
     }
 
     const auctionId = parseInt(id);
+    if (Number.isNaN(auctionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid auction id'
+      });
+    }
+
+    // Validate user still exists (handles stale tokens after DB resets).
+    const userExists = await getOne<{ id: number }>(
+      'SELECT id FROM users WHERE id = ?',
+      [userId]
+    );
+    if (!userExists) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found. Please log in again.'
+      });
+    }
+
+    // Watchlist table references auctions(id), so this auction must exist in DB.
+    const auctionExists = await getOne<{ id: number }>(
+      'SELECT id FROM auctions WHERE id = ?',
+      [auctionId]
+    );
+    if (!auctionExists) {
+      return res.status(404).json({
+        success: false,
+        message: 'Auction is not stored in database. This item cannot be watched yet.'
+      });
+    }
 
     // Check if already in watchlist
     const existing = await getOne(
@@ -333,6 +363,14 @@ router.post('/:id/watch', authMiddleware, async (req: Request, res: Response) =>
     });
   } catch (error) {
     console.error('Error adding to watchlist:', error);
+
+    if (error instanceof Error && error.message.includes('SQLITE_CONSTRAINT')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot add to watchlist because related user or auction record is missing.'
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Internal server error'
@@ -342,7 +380,7 @@ router.post('/:id/watch', authMiddleware, async (req: Request, res: Response) =>
 
 /**
  * @swagger
- * /api/auctions/{id}/unwatch:
+ * /api/auctions/unwatch/{id}:
  *   delete:
  *     tags:
  *       - Auctions
@@ -364,7 +402,7 @@ router.post('/:id/watch', authMiddleware, async (req: Request, res: Response) =>
  *       401:
  *         description: Unauthorized - no token provided
  */
-router.delete('/:id/unwatch', authMiddleware, async (req: Request, res: Response) => {
+router.delete('/unwatch/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
@@ -413,7 +451,7 @@ router.delete('/:id/unwatch', authMiddleware, async (req: Request, res: Response
 
 /**
  * @swagger
- * /api/auctions/watchlist/get:
+ * /api/auctions/get-watchlist:
  *   get:
  *     tags:
  *       - Auctions
@@ -426,7 +464,7 @@ router.delete('/:id/unwatch', authMiddleware, async (req: Request, res: Response
  *       401:
  *         description: Unauthorized - no token provided
  */
-router.get('/watchlist/get', authMiddleware, async (req: Request, res: Response) => {
+router.get('/get-watchlist', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
 
@@ -460,7 +498,7 @@ router.get('/watchlist/get', authMiddleware, async (req: Request, res: Response)
 
 /**
  * @swagger
- * /api/auctions/{id}/is-watched:
+ * /api/auctions/is-watched/{id}:
  *   get:
  *     tags:
  *       - Auctions
@@ -480,7 +518,7 @@ router.get('/watchlist/get', authMiddleware, async (req: Request, res: Response)
  *       401:
  *         description: Unauthorized - no token provided
  */
-router.get('/:id/is-watched', authMiddleware, async (req: Request, res: Response) => {
+router.get('/is-watched/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;

@@ -74,15 +74,14 @@ export const auctionApi = {
     }
   },
 
-  // Place a bid (skeleton for now)
+  // Place a bid
   placeBid: async (auctionId: number, bidAmount: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/bid`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bidAmount })
-      });
-      return await response.json();
+      const response = await fetch(
+        `${API_BASE_URL}/auctions/${auctionId}/bid?bidAmount=${encodeURIComponent(String(bidAmount))}`,
+        { method: 'GET' }
+      );
+      return await parseResponseOrThrow(response, 'Failed to place bid');
     } catch (error) {
       console.error('Error placing bid:', error);
       throw error;
@@ -118,7 +117,7 @@ export const auctionApi = {
   // Add auction to user's watchlist
   watchAuction: async (auctionId: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/watch`, {
+      const response = await fetch(`${API_BASE_URL}/auctions/watch/${auctionId}`, {
         method: 'POST',
         headers: getAuthHeaders()
       });
@@ -132,7 +131,7 @@ export const auctionApi = {
   // Remove auction from user's watchlist
   unwatchAuction: async (auctionId: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/unwatch`, {
+      const response = await fetch(`${API_BASE_URL}/auctions/unwatch/${auctionId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -146,7 +145,7 @@ export const auctionApi = {
   // Get user's watchlist
   getWatchlist: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auctions/watchlist/get`, {
+      const response = await fetch(`${API_BASE_URL}/auctions/get-watchlist`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
@@ -160,7 +159,7 @@ export const auctionApi = {
   // Check if auction is watched by current user
   isAuctionWatched: async (auctionId: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/is-watched`, {
+      const response = await fetch(`${API_BASE_URL}/auctions/is-watched/${auctionId}`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
