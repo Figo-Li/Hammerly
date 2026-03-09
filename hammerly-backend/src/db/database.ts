@@ -37,6 +37,18 @@ export const runQuery = (sql: string, params: any[] = []): Promise<void> => {
 };
 
 /**
+ * Run an INSERT and return the last inserted row ID
+ */
+export const runInsert = (sql: string, params: any[] = []): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve(this.lastID);
+    });
+  });
+};
+
+/**
  * Get a single row from the database
  */
 export const getOne = <T>(sql: string, params: any[] = []): Promise<T | null> => {

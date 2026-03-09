@@ -18,6 +18,7 @@ type AuthState = {
   watchedCount: number;
 
   loginSuccess: (payload: { user: User; token?: string }) => void;
+  updateUser: (updates: Partial<User>) => void;
   logout: () => void;
   setWatchedCount: (count: number) => void;
 };
@@ -36,6 +37,11 @@ export const useAuthStore = create<AuthState>()(
           user,
           token: token || null,
         }),
+
+      updateUser: (updates) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...updates } : null,
+        })),
 
       logout: () => {
         localStorage.removeItem('token');
