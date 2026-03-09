@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
 import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
+import { auctionApi } from '@/api/auctions';
+import { useNavigate } from 'react-router-dom';
 
 interface WatchedItem {
   id: number;
   title: string;
   image: string;
   currentBid: number;
-  timeLeft: string;
-  watching: number;
+  timeLeft?: string;
+  endTime?: string;
+  watching?: number;
 }
 
 export default function Cart() {
+  const navigate = useNavigate();
   const [watchedItems, setWatchedItems] = useState<WatchedItem[]>([]);
 
   useEffect(() => {
@@ -29,28 +33,29 @@ export default function Cart() {
     };
   }, []);
 
-  const loadWatchedItems = () => {
-    const stored = localStorage.getItem('watchedItems');
-    if (stored) {
-      try {
-        const items = JSON.parse(stored);
-        if (Array.isArray(items)) {
-          setWatchedItems(items);
-        }
-      } catch (e) {
-        console.error('Error parsing watched items:', e);
-        setWatchedItems([]);
-      }
-    } else {
+  const loadWatchedItems = async () => {
+    if (!localStorage.getItem('token')) {
+      setWatchedItems([]);
+      return;
+    }
+
+    try {
+      const response = await auctionApi.getWatchlist();
+      setWatchedItems(Array.isArray(response?.data) ? response.data : []);
+    } catch (e) {
+      console.error('Error fetching watched items:', e);
       setWatchedItems([]);
     }
   };
 
-  const removeItem = (id: number) => {
-    const updatedItems = watchedItems.filter(item => item.id !== id);
-    setWatchedItems(updatedItems);
-    localStorage.setItem('watchedItems', JSON.stringify(updatedItems));
-    window.dispatchEvent(new Event('watchedItemsUpdated'));
+  const removeItem = async (id: number) => {
+    try {
+      await auctionApi.unwatchAuction(id);
+      setWatchedItems(prev => prev.filter(item => item.id !== id));
+      window.dispatchEvent(new Event('watchedItemsUpdated'));
+    } catch (e) {
+      console.error('Error removing watched item:', e);
+    }
   };
 
   return (
@@ -74,7 +79,7 @@ export default function Cart() {
                 Start watching items you're interested in. You can add items to your watchlist from any auction detail page.
               </p>
               <button
-                onClick={() => window.REACT_APP_NAVIGATE('/auctions')}
+                onClick={() => navigate('/auctions')}
                 className="bg-[#8B2635] text-white px-8 py-3 rounded-lg hover:bg-[#7A1F2B] transition-colors whitespace-nowrap cursor-pointer font-semibold"
               >
                 Browse Auctions
@@ -93,7 +98,7 @@ export default function Cart() {
                           src={item.image}
                           alt={item.title}
                           className="w-full h-full object-cover object-top rounded-lg cursor-pointer"
-                          onClick={() => window.REACT_APP_NAVIGATE(`/auction/${item.id}`)}
+                          onClick={() => navigate(`/auction/${item.id}`)}
                         />
                       </div>
 
@@ -103,7 +108,7 @@ export default function Cart() {
                           <div>
                             <h3 
                               className="text-lg font-semibold text-gray-900 hover:text-[#8B2635] cursor-pointer mb-2"
-                              onClick={() => window.REACT_APP_NAVIGATE(`/auction/${item.id}`)}
+                              onClick={() => navigate(`/auction/${item.id}`)}
                             >
                               {item.title}
                             </h3>
@@ -120,7 +125,7 @@ export default function Cart() {
                         <div className="flex items-center gap-4 mb-3">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <i className="ri-eye-line"></i>
-                            <span>{item.watching} watching</span>
+                            <span>{item.watching || 0} watching</span>
                           </div>
                         </div>
 
@@ -133,7 +138,7 @@ export default function Cart() {
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-gray-500 mb-1">Time Left</p>
-                            <p className="text-sm font-semibold text-gray-900">{item.timeLeft}</p>
+                            <p className="text-sm font-semibold text-gray-900">{item.timeLeft || (item.endTime ? new Date(item.endTime).toLocaleString() : '-')}</p>
                           </div>
                         </div>
                       </div>
@@ -162,7 +167,7 @@ export default function Cart() {
 
                   <div className="space-y-3">
                     <button
-                      onClick={() => window.REACT_APP_NAVIGATE('/auctions')}
+                      onClick={() => navigate('/auctions')}
                       className="w-full bg-[#8B2635] text-white py-3 rounded-lg hover:bg-[#7A1F2B] transition-colors whitespace-nowrap cursor-pointer font-semibold"
                     >
                       Browse More Auctions

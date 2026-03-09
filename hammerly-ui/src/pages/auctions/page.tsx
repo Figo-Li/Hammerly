@@ -36,9 +36,9 @@ export default function Auctions() {
         let response;
 
         if (searchQuery.trim()) {
-          response = await auctionApi.searchAuctions(searchQuery);
+          response = await auctionApi.searchAuctions(searchQuery, currentPage);
         } else {
-          response = await auctionApi.searchAuctions('');
+          response = await auctionApi.searchAuctions('', currentPage);
         }
 
         setAuctions(response.data || []);
