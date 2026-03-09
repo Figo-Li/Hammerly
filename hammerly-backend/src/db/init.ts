@@ -52,6 +52,19 @@ export const initializeDatabase = async () => {
       )
     `);
 
+    // Watchlist table
+    await runQuery(`
+      CREATE TABLE IF NOT EXISTS watchlist (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        auction_id INTEGER NOT NULL,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, auction_id),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (auction_id) REFERENCES auctions(id)
+      )
+    `);
+
     console.log('✅ Database tables initialized successfully');
   } catch (error) {
     console.error('❌ Error initializing database:', error);
