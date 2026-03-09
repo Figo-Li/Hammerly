@@ -37,7 +37,8 @@ export const auctionListings = [
     progress: 65,
     condition: "Good",
     totalBids: 15,
-    seller: "seller 2"
+    seller: "seller 2",
+    description: "This is a description of Auction item 2."
   },
   {
     id: 3,
@@ -49,7 +50,8 @@ export const auctionListings = [
     progress: 40,
     condition: "Very Good",
     totalBids: 22,
-    seller: "seller 3"
+    seller: "seller 3",
+    description: "This is a description of Auction item 3."
   },
   {
     id: 4,
@@ -61,7 +63,8 @@ export const auctionListings = [
     progress: 25,
     condition: "Excellent",
     totalBids: 8,
-    seller: "seller 1"
+    seller: "seller 1",
+    description: "This is a description of Auction item 4."
   },
   {
     id: 5,
@@ -73,7 +76,8 @@ export const auctionListings = [
     progress: 25,
     condition: "Excellent",
     totalBids: 8,
-    seller: "seller 3"
+    seller: "seller 3",
+    description: "This is a description of Auction item 5."
   },
   {
     id: 6,
@@ -85,7 +89,8 @@ export const auctionListings = [
     progress: 23,
     condition: "Excellent",
     totalBids: 3,
-    seller: "seller 4"
+    seller: "seller 4",
+    description: "This is a description of Auction item 6."
   },
   {
     id: 7,
@@ -97,7 +102,8 @@ export const auctionListings = [
     progress: 23,
     condition: "Excellent",
     totalBids: 3,
-    seller: "seller 4"
+    seller: "seller 4",
+    description: "This is a description of Auction item 7."
   },
   {
     id: 8,
@@ -109,11 +115,12 @@ export const auctionListings = [
     progress: 23,
     condition: "Excellent",
     totalBids: 3,
-    seller: "seller 4"
+    seller: "seller 4",
+    description: "This is a description of Auction item 8."
   },
   {
     id: 9,
-    title: "Auction item 8",
+    title: "Auction item 9",
     category: "Category 2",
     currentBid: 20000,
     timeRemaining: "1d 12h",
@@ -121,7 +128,8 @@ export const auctionListings = [
     progress: 23,
     condition: "Excellent",
     totalBids: 3,
-    seller: "seller 4"
+    seller: "seller 4",
+    description: "This is a description of Auction item 9."
   },
   {
     id: 10,
@@ -133,6 +141,72 @@ export const auctionListings = [
     progress: 23,
     condition: "Excellent",
     totalBids: 3,
-    seller: "seller 4"
+    seller: "seller 4",
+    description: "This is a description of Auction item 10."
+  },
+  {
+    id: 11,
+    title: "Vintage Leather Watch",
+    category: "Category 1",
+    currentBid: 35000,
+    timeRemaining: "5h 45m",
+    image: "/images/picture.jpg",
+    progress: 70,
+    condition: "Very Good",
+    totalBids: 18,
+    seller: "seller 2",
+    description: "Beautiful vintage leather watch with original strap and working mechanism."
+  },
+  {
+    id: 12,
+    title: "Classic Book Collection",
+    category: "Category 3",
+    currentBid: 15000,
+    timeRemaining: "2d 3h",
+    image: "/images/picture.jpg",
+    progress: 35,
+    condition: "Good",
+    totalBids: 12,
+    seller: "seller 1",
+    description: "Rare collection of classic literature from the 1920s era."
+  },
+  {
+    id: 13,
+    title: "Antique Porcelain Vase",
+    category: "Category 2",
+    currentBid: 60000,
+    timeRemaining: "6h 30m",
+    image: "/images/picture.jpg",
+    progress: 78,
+    condition: "Excellent",
+    totalBids: 32,
+    seller: "seller 3",
+    description: "Beautiful antique Chinese porcelain vase with intricate designs."
+  },
+  {
+    id: 14,
+    title: "Gold Pocket Watch",
+    category: "Category 4",
+    currentBid: 85000,
+    timeRemaining: "12h 15m",
+    image: "/images/picture.jpg",
+    progress: 92,
+    condition: "Excellent",
+    totalBids: 45,
+    seller: "seller 1",
+    description: "Rare 18k gold pocket watch with original case and chain."
+  },
+  {
+    id: 15,
+    title: "Wooden Music Box",
+    category: "Category 2",
+    currentBid: 12000,
+    timeRemaining: "1d 18h",
+    image: "/images/picture.jpg",
+    progress: 28,
+    condition: "Very Good",
+    totalBids: 9,
+    seller: "seller 4",
+    description: "Traditional wooden music box with hand-crafted details and working mechanism."
   }
 ];
