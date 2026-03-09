@@ -3,6 +3,7 @@ import {  useState, useRef, ChangeEvent, DragEvent } from 'react';
 
 import { Listing } from '@/mocks/myListing';
 import { auctionApi } from '@/api/auctions';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface CreateListingModalProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ interface CreateListingModalProps {
 }
 
 export default function CreateListingModal({ onClose, editingListing }: CreateListingModalProps) {
+  const { user } = useAuthStore();
   const isEditing = !!editingListing;
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -136,6 +138,7 @@ export default function CreateListingModal({ onClose, editingListing }: CreateLi
         title: formData.title.trim(),
         category: formData.category.trim(),
         description: formData.description.trim() || undefined,
+        sellerId: user?.id,
         startingPrice: formData.startingPrice,
         reservePrice: formData.reservePrice || undefined,
         duration: formData.duration,

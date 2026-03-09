@@ -4,6 +4,7 @@ type CreateAuctionPayload = {
   title: string;
   category: string;
   description?: string;
+  sellerId?: number | string;
   // New form-native fields
   startingPrice?: string | number;
   reservePrice?: string | number;

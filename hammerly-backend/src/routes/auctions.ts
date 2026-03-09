@@ -753,6 +753,10 @@ router.get('/is-watched/:id', authMiddleware, async (req: Request, res: Response
  *                 nullable: true
  *                 description: Detailed description of the item (optional)
  *                 example: Well-maintained lens with minor cosmetic wear.
+ *               sellerId:
+ *                 type: integer
+ *                 description: Seller user ID. Must match the authenticated user when provided.
+ *                 example: 2
  *               startingPrice:
  *                 type: number
  *                 minimum: 0.01
@@ -845,6 +849,8 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
       title,
       category,
       description,
+      sellerId,
+      seller_id,
       startPrice,
       startingPrice,
       reservePrice,
@@ -856,14 +862,35 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
       shippingCost,
       endTime,
     } = req.body;
-    const seller_id = req.user?.userId;
+    const authSellerId = req.user?.userId;
+    const payloadSellerIdRaw = sellerId ?? seller_id;
+    const payloadSellerId = payloadSellerIdRaw !== undefined ? Number(payloadSellerIdRaw) : undefined;
 
-    if (!seller_id) {
+    if (!authSellerId) {
       return res.status(401).json({
         success: false,
         message: 'Unauthorized'
       });
     }
+
+    if (
+      payloadSellerIdRaw !== undefined &&
+      (payloadSellerId === undefined || Number.isNaN(payloadSellerId) || payloadSellerId <= 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'sellerId/seller_id must be a valid positive number'
+      });
+    }
+
+    if (payloadSellerId !== undefined && payloadSellerId !== authSellerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'sellerId does not match authenticated user'
+      });
+    }
+
+    const resolvedSellerId = authSellerId;
 
     const resolvedStartPrice = Number(startPrice ?? startingPrice);
 
@@ -925,7 +952,7 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
         resolvedStartPrice,
         resolvedImage || null,
         condition || null,
-        seller_id,
+        resolvedSellerId,
         resolvedEndTime,
         'active',
       ]
@@ -934,7 +961,7 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
     // Get the created auction
     const newAuction = await getOne(
       'SELECT * FROM auctions WHERE seller_id = ? ORDER BY id DESC LIMIT 1',
-      [seller_id]
+      [resolvedSellerId]
     );
 
     res.status(201).json({
