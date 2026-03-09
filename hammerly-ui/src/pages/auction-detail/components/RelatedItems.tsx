@@ -50,7 +50,7 @@ export default function RelatedItems({ currentId }: RelatedItemsProps) {
           <div 
             key={item.id}
             className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer"
-            onClick={() => window.location.href = `/auction/${item.id}`}
+            onClick={() => window.REACT_APP_NAVIGATE(`/auction/${item.id}`)}
           >
             <div className="p-3">
               <img 

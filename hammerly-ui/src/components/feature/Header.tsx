@@ -1,32 +1,44 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
-
-function getWatchedCount() {
-  try {
-    const watchedItems = JSON.parse(localStorage.getItem('watchedItems') || '[]');
-    if (!Array.isArray(watchedItems)) return 0;
-    return watchedItems.length;
-  } catch {
-    localStorage.setItem('watchedItems', '[]');
-    return 0;
-  }
-}
+import { auctionApi } from '@/api/auctions';
 
 export default function Header() {
   const location = useLocation();
   const { isLoggedIn } = useAuthStore();
-  const [watchedCount, setWatchedCount] = useState(() => {
-    return getWatchedCount();
-  });
+  const [watchedCount, setWatchedCount] = useState(0);
 
   useEffect(() => {
-    setWatchedCount(getWatchedCount());
-  }, [location.pathname]);
+    const loadWatchedCount = async () => {
+      if (!isLoggedIn) {
+        setWatchedCount(0);
+        return;
+      }
+
+      try {
+        const response = await auctionApi.getWatchlist();
+        setWatchedCount(Array.isArray(response?.data) ? response.data.length : 0);
+      } catch {
+        setWatchedCount(0);
+      }
+    };
+
+    void loadWatchedCount();
+  }, [location.pathname, isLoggedIn]);
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      setWatchedCount(getWatchedCount());
+    const handleStorageChange = async () => {
+      if (!isLoggedIn) {
+        setWatchedCount(0);
+        return;
+      }
+
+      try {
+        const response = await auctionApi.getWatchlist();
+        setWatchedCount(Array.isArray(response?.data) ? response.data.length : 0);
+      } catch {
+        setWatchedCount(0);
+      }
     };
 
     window.addEventListener('watchedItemsUpdated', handleStorageChange);
@@ -36,7 +48,7 @@ export default function Header() {
       window.removeEventListener('watchedItemsUpdated', handleStorageChange);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [isLoggedIn]);
 
   const navLinks = [
     { name: 'Home', href: '/' },

@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import Button from '../../../components/base/Button';
+import { auctionApi } from '@/api/auctions';
 
-import { Auction } from '@/mocks/auctions';
+interface Auction {
+  id: number;
+  title: string;
+  category: string;
+  currentBid: number;
+  timeRemaining: string;
+  image: string;
+  progress: number;
+}
 
 interface BiddingSectionProps {
   auction: Auction;
@@ -15,33 +24,41 @@ export default function BiddingSection({ auction }: BiddingSectionProps) {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    const watchedItems = JSON.parse(localStorage.getItem('watchedItems') || '[]');
-    const isInWatchlist = watchedItems.some((item: { id: number }) => item.id === auction.id);
-    setIsWatching(isInWatchlist);
+    const checkWatchStatus = async () => {
+      if (!localStorage.getItem('token')) {
+        setIsWatching(false);
+        return;
+      }
+
+      try {
+        const response = await auctionApi.isAuctionWatched(auction.id);
+        setIsWatching(Boolean(response?.isWatched));
+      } catch {
+        setIsWatching(false);
+      }
+    };
+
+    void checkWatchStatus();
   }, [auction.id]);
 
-  const handleToggleWatch = () => {
-    const watchedItems = JSON.parse(localStorage.getItem('watchedItems') || '[]');
-    
-    if (isWatching) {
-      const updatedItems = watchedItems.filter((item: { id: number }) => item.id !== auction.id);
-      localStorage.setItem('watchedItems', JSON.stringify(updatedItems));
-      setIsWatching(false);
-    } else {
-      const newItem = {
-        id: auction.id,
-        title: auction.title,
-        image: auction.image,
-        currentBid: auction.currentBid,
-        timeLeft: auction.timeRemaining,
-        watching: Math.floor(Math.random() * 100) + 20
-      };
-      watchedItems.push(newItem);
-      localStorage.setItem('watchedItems', JSON.stringify(watchedItems));
-      setIsWatching(true);
+  const handleToggleWatch = async () => {
+    if (!localStorage.getItem('token')) {
+      alert('Please log in to manage your watchlist.');
+      return;
     }
-    
-    window.dispatchEvent(new Event('watchedItemsUpdated'));
+
+    try {
+      if (isWatching) {
+        await auctionApi.unwatchAuction(auction.id);
+        setIsWatching(false);
+      } else {
+        await auctionApi.watchAuction(auction.id);
+        setIsWatching(true);
+      }
+      window.dispatchEvent(new Event('watchedItemsUpdated'));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to update watchlist.');
+    }
   };
 
   const handleBidIncrement = (amount: number) => {
@@ -55,10 +72,16 @@ export default function BiddingSection({ auction }: BiddingSectionProps) {
   };
 
   const handleBid = async () => {
-    // setBidStatus('processing');
+    setBidStatus('processing');
+    setErrorMessage('');
 
-    // TODO: link API here
-    setBidStatus('error');
+    try {
+      await auctionApi.placeBid(auction.id, bidAmount);
+      setBidStatus('success');
+    } catch (error) {
+      setBidStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Something went wrong while placing your bid. Please try again.');
+    }
 
   };
 
