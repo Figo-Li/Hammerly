@@ -4,10 +4,18 @@ type CreateAuctionPayload = {
   title: string;
   category: string;
   description?: string;
-  startPrice: number;
+  // New form-native fields
+  startingPrice?: string | number;
+  reservePrice?: string | number;
+  duration?: string | number;
+  images?: string[];
+  shippingOption?: 'seller' | 'buyer' | string;
+  shippingCost?: string | number;
+  // Backward-compatible fields
+  startPrice?: number;
   condition?: string;
   image?: string;
-  endTime: string;
+  endTime?: string;
 };
 
 const getAuthHeaders = () => {

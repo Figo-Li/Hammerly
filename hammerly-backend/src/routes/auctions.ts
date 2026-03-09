@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { auctionListings } from '../mocks/auctions.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { runQuery, getOne, getAll } from '../db/database.js';
 
@@ -11,6 +10,49 @@ const auctionStats = {
   averageBid: 850,
   completedToday: 32
 };
+
+type AuctionRow = {
+  id: number;
+  title: string;
+  category: string;
+  description: string | null;
+  startPrice: number;
+  currentBid: number;
+  image: string | null;
+  condition: string | null;
+  seller_id: number;
+  status: string;
+  endTime: string;
+  seller?: string | null;
+  totalBids?: number;
+};
+
+const toTimeRemaining = (endTime: string): string => {
+  const diffMs = new Date(endTime).getTime() - Date.now();
+  if (diffMs <= 0) return 'Ended';
+
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+};
+
+const toProgress = (startPrice: number, currentBid: number): number => {
+  if (!startPrice || startPrice <= 0) return 0;
+  return Math.min(100, Math.max(0, Math.round((currentBid / startPrice) * 100)));
+};
+
+const mapAuctionForClient = (row: AuctionRow) => ({
+  ...row,
+  totalBids: Number(row.totalBids || 0),
+  seller: row.seller || `Seller ${row.seller_id}`,
+  timeRemaining: toTimeRemaining(row.endTime),
+  progress: toProgress(Number(row.startPrice), Number(row.currentBid)),
+});
 
 
 // /**
@@ -61,12 +103,45 @@ const auctionStats = {
  */
 
 // GET top 4 auctions on home page
-router.get('/get-top', (req: Request, res: Response) => {
-  res.json({
-    success: true,
-    data: auctionListings.slice(0, 6),
-    stats: auctionStats
-  });
+router.get('/get-top', async (req: Request, res: Response) => {
+  try {
+    const rows = await getAll<AuctionRow>(
+      `SELECT a.*, COALESCE(u.firstName || ' ' || u.lastName, NULL) AS seller,
+              COUNT(b.id) AS totalBids
+       FROM auctions a
+       LEFT JOIN users u ON u.id = a.seller_id
+       LEFT JOIN bids b ON b.auction_id = a.id
+       WHERE a.status = 'active'
+       GROUP BY a.id
+       ORDER BY a.createdAt DESC
+       LIMIT 6`
+    );
+
+    const stats = await getOne<{ activeLots: number; totalValue: number; averageBid: number }>(
+      `SELECT COUNT(*) AS activeLots,
+              COALESCE(SUM(currentBid), 0) AS totalValue,
+              COALESCE(AVG(currentBid), 0) AS averageBid
+       FROM auctions
+       WHERE status = 'active'`
+    );
+
+    res.json({
+      success: true,
+      data: rows.map(mapAuctionForClient),
+      stats: {
+        activeLots: Number(stats?.activeLots || 0),
+        totalValue: Number(stats?.totalValue || 0),
+        averageBid: Math.round(Number(stats?.averageBid || 0)),
+        completedToday: auctionStats.completedToday,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching top auctions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
 });
 
 /**
@@ -90,24 +165,58 @@ router.get('/get-top', (req: Request, res: Response) => {
  *         description: Auction not found
  */
 // GET auction by ID
-router.get('/get/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const auction = auctionListings.find(item => item.id === parseInt(id));
+router.get('/get/:id', async (req: Request, res: Response) => {
+  try {
+    const auctionId = parseInt(req.params.id);
+    if (Number.isNaN(auctionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid auction id' });
+    }
 
-  if (!auction) {
-    return res.status(404).json({
-      success: false,
-      message: 'Auction not found'
+    const auction = await getOne<AuctionRow>(
+      `SELECT a.*, COALESCE(u.firstName || ' ' || u.lastName, NULL) AS seller,
+              COUNT(b.id) AS totalBids
+       FROM auctions a
+       LEFT JOIN users u ON u.id = a.seller_id
+       LEFT JOIN bids b ON b.auction_id = a.id
+       WHERE a.id = ?
+       GROUP BY a.id`,
+      [auctionId]
+    );
+
+    if (!auction) {
+      return res.status(404).json({
+        success: false,
+        message: 'Auction not found'
+      });
+    }
+
+    const bidRows = await getAll<{ amount: number; bidTime: string; bidder: string }>(
+      `SELECT b.amount, b.bidTime,
+              COALESCE(u.firstName || '***' || SUBSTR(u.lastName, 1, 1), 'User***') AS bidder
+       FROM bids b
+       LEFT JOIN users u ON u.id = b.bidder_id
+       WHERE b.auction_id = ?
+       ORDER BY b.bidTime DESC
+       LIMIT 12`,
+      [auctionId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        ...mapAuctionForClient(auction),
+        bidHistory: bidRows.map((b) => ({
+          bidder: b.bidder,
+          amount: Number(b.amount),
+          time: b.bidTime,
+        })),
+      }
     });
+  } catch (error) {
+    console.error('Error fetching auction:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
-
-  res.json({
-    success: true,
-    data: auction
-  });
 });
-
-
 
 /**
  * @swagger
@@ -131,25 +240,39 @@ router.get('/get/:id', (req: Request, res: Response) => {
  */
 
 // GET related auctions by item ID
-router.get('/get-related/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const auction = auctionListings.find(item => item.id === parseInt(id));
+router.get('/get-related/:id', async (req: Request, res: Response) => {
+  try {
+    const auctionId = parseInt(req.params.id);
+    if (Number.isNaN(auctionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid auction id' });
+    }
 
-  if (!auction) {
-    return res.status(404).json({
-      success: false,
-      message: 'Auction not found'
+    const target = await getOne<{ category: string }>('SELECT category FROM auctions WHERE id = ?', [auctionId]);
+    if (!target) {
+      return res.status(404).json({ success: false, message: 'Auction not found' });
+    }
+
+    const related = await getAll<AuctionRow>(
+      `SELECT a.*, COALESCE(u.firstName || ' ' || u.lastName, NULL) AS seller,
+              COUNT(b.id) AS totalBids
+       FROM auctions a
+       LEFT JOIN users u ON u.id = a.seller_id
+       LEFT JOIN bids b ON b.auction_id = a.id
+       WHERE a.category = ? AND a.id != ? AND a.status = 'active'
+       GROUP BY a.id
+       ORDER BY a.createdAt DESC
+       LIMIT 4`,
+      [target.category, auctionId]
+    );
+
+    res.json({
+      success: true,
+      data: related.map(mapAuctionForClient),
     });
+  } catch (error) {
+    console.error('Error fetching related auctions:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
-
-  const relatedItems = auctionListings
-    .filter(item => item.category === auction.category && item.id !== auction.id)
-    .slice(0, 4);
-
-  res.json({
-    success: true,
-    data: relatedItems
-  });
 });
 
 
@@ -180,33 +303,47 @@ router.get('/get-related/:id', (req: Request, res: Response) => {
  */
 
 // SEARCH auctions by title substring with pagination
-router.get('/search', (req: Request, res: Response) => {
-  const q = req.query.q as string;
-  const page = Number(req.query.page) || 1;
-  const limit = 9; 
-  if (!q) {
-    // If no search query is provided, return all auctions with pagination
-    const start = (page - 1) * limit;
-    return res.json({
+router.get('/search', async (req: Request, res: Response) => {
+  try {
+    const q = (req.query.q as string) || '';
+    const page = Number(req.query.page) || 1;
+    const limit = 9;
+    const offset = (page - 1) * limit;
+    const hasQuery = q.trim().length > 0;
+
+    const whereClause = hasQuery ? "WHERE a.status = 'active' AND LOWER(a.title) LIKE LOWER(?)" : "WHERE a.status = 'active'";
+    const whereParams = hasQuery ? [`%${q.trim()}%`] : [];
+
+    const totalRow = await getOne<{ total: number }>(
+      `SELECT COUNT(*) as total FROM auctions a ${whereClause}`,
+      whereParams
+    );
+
+    const rows = await getAll<AuctionRow>(
+      `SELECT a.*, COALESCE(u.firstName || ' ' || u.lastName, NULL) AS seller,
+              COUNT(b.id) AS totalBids
+       FROM auctions a
+       LEFT JOIN users u ON u.id = a.seller_id
+       LEFT JOIN bids b ON b.auction_id = a.id
+       ${whereClause}
+       GROUP BY a.id
+       ORDER BY a.createdAt DESC
+       LIMIT ? OFFSET ?`,
+      [...whereParams, limit, offset]
+    );
+
+    res.json({
       success: true,
-      data: auctionListings.slice(start, start + limit),
-      total: auctionListings.length,
+      data: rows.map(mapAuctionForClient),
+      total: Number(totalRow?.total || 0),
       page,
-      totalPages: Math.ceil(auctionListings.length / limit),
+      totalPages: Math.ceil(Number(totalRow?.total || 0) / limit),
+      limit,
     });
+  } catch (error) {
+    console.error('Error searching auctions:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
-  const searchTerm = q.toLowerCase();
-  const filtered = auctionListings.filter(item =>
-    item.title.toLowerCase().includes(searchTerm)
-  );
-  const start = (page - 1) * limit;
-  res.json({
-    success: true,
-    data: filtered.slice(start, start + limit),
-    total: filtered.length,
-    page,
-    limit
-  });
 });
 
 
@@ -240,35 +377,65 @@ router.get('/search', (req: Request, res: Response) => {
  */
 
 // PLACE a bid (changed to GET method)
-router.get('/bid/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const bidAmount = Number(req.query.bidAmount);
+const handlePlaceBid = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+    const bidAmount = Number(req.query.bidAmount);
 
-  const auction = auctionListings.find(item => item.id === parseInt(id));
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
 
-  if (!auction) {
-    return res.status(404).json({
-      success: false,
-      message: 'Auction not found'
+    if (Number.isNaN(bidAmount) || bidAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid bid amount' });
+    }
+
+    const auctionId = parseInt(id);
+    const auction = await getOne<{ id: number; currentBid: number; status: string }>(
+      'SELECT id, currentBid, status FROM auctions WHERE id = ?',
+      [auctionId]
+    );
+
+    if (!auction) {
+      return res.status(404).json({ success: false, message: 'Auction not found' });
+    }
+
+    if (auction.status !== 'active') {
+      return res.status(400).json({ success: false, message: 'Auction is not active' });
+    }
+
+    if (bidAmount <= Number(auction.currentBid)) {
+      return res.status(400).json({ success: false, message: 'Bid amount must be higher than the current bid' });
+    }
+
+    await runQuery('UPDATE auctions SET currentBid = ? WHERE id = ?', [bidAmount, auctionId]);
+    await runQuery('INSERT INTO bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)', [auctionId, userId, bidAmount]);
+
+    const updated = await getOne<AuctionRow>(
+      `SELECT a.*, COALESCE(u.firstName || ' ' || u.lastName, NULL) AS seller,
+              COUNT(b.id) AS totalBids
+       FROM auctions a
+       LEFT JOIN users u ON u.id = a.seller_id
+       LEFT JOIN bids b ON b.auction_id = a.id
+       WHERE a.id = ?
+       GROUP BY a.id`,
+      [auctionId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Bid placed successfully',
+      data: updated ? mapAuctionForClient(updated) : null,
     });
+  } catch (error) {
+    console.error('Error placing bid:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
+};
 
-  if (bidAmount <= auction.currentBid) {
-    return res.status(400).json({
-      success: false,
-      message: 'Bid amount must be higher than the current bid'
-    });
-  }
-
-  auction.currentBid = bidAmount;
-  auction.totalBids += 1;
-
-  res.json({
-    success: true,
-    message: 'Bid placed successfully',
-    data: auction
-  });
-});
+router.get('/bid/:id', authMiddleware, handlePlaceBid);
+router.get('/:id/bid', authMiddleware, handlePlaceBid);
 
 /**
  * @swagger
@@ -415,26 +582,26 @@ router.delete('/unwatch/:id', authMiddleware, async (req: Request, res: Response
     }
 
     const auctionId = parseInt(id);
+    if (Number.isNaN(auctionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid auction id'
+      });
+    }
 
-    // Remove from watchlist
-    const result = await new Promise<number>((resolve, reject) => {
-      const db = require('../db/database.js').default;
-      db.run(
-        'DELETE FROM watchlist WHERE user_id = ? AND auction_id = ?',
-        [userId, auctionId],
-        function(this: any, err: any) {
-          if (err) reject(err);
-          else resolve(this.changes);
-        }
-      );
-    });
+    const existing = await getOne<{ id: number }>(
+      'SELECT id FROM watchlist WHERE user_id = ? AND auction_id = ?',
+      [userId, auctionId]
+    );
 
-    if (result === 0) {
+    if (!existing) {
       return res.status(404).json({
         success: false,
         message: 'Item not in watchlist'
       });
     }
+
+    await runQuery('DELETE FROM watchlist WHERE user_id = ? AND auction_id = ?', [userId, auctionId]);
 
     res.json({
       success: true,
@@ -475,17 +642,22 @@ router.get('/get-watchlist', authMiddleware, async (req: Request, res: Response)
       });
     }
 
-    const watchlist = await getAll(
-      `SELECT a.* FROM auctions a
+    const watchlist = await getAll<AuctionRow>(
+      `SELECT a.*, COALESCE(u.firstName || ' ' || u.lastName, NULL) AS seller,
+              COUNT(b.id) AS totalBids
+       FROM auctions a
        INNER JOIN watchlist w ON a.id = w.auction_id
+       LEFT JOIN users u ON u.id = a.seller_id
+       LEFT JOIN bids b ON b.auction_id = a.id
        WHERE w.user_id = ?
+       GROUP BY a.id
        ORDER BY w.createdAt DESC`,
       [userId]
     );
 
     res.json({
       success: true,
-      data: watchlist
+      data: watchlist.map(mapAuctionForClient)
     });
   } catch (error) {
     console.error('Error fetching watchlist:', error);
@@ -556,6 +728,7 @@ router.get('/is-watched/:id', authMiddleware, async (req: Request, res: Response
  *     tags:
  *       - Auctions
  *     summary: Create a new auction
+ *     description: Creates an active auction owned by the authenticated user.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -567,42 +740,122 @@ router.get('/is-watched/:id', authMiddleware, async (req: Request, res: Response
  *             properties:
  *               title:
  *                 type: string
- *                 description: Auction title
+ *                 minLength: 1
+ *                 description: Auction title (required)
+ *                 example: Vintage Camera Lens
  *               category:
  *                 type: string
- *                 description: Category of the item
+ *                 minLength: 1
+ *                 description: Category of the item (required)
+ *                 example: Collectibles
  *               description:
  *                 type: string
- *                 description: Detailed description of the item
+ *                 nullable: true
+ *                 description: Detailed description of the item (optional)
+ *                 example: Well-maintained lens with minor cosmetic wear.
+ *               startingPrice:
+ *                 type: number
+ *                 minimum: 0.01
+ *                 description: Starting bid price (preferred input field)
+ *                 example: 120
  *               startPrice:
  *                 type: number
- *                 description: Starting bid price
+ *                 minimum: 0.01
+ *                 description: Starting bid price (legacy-compatible field)
+ *                 example: 120
+ *               reservePrice:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Reserve price (optional)
+ *                 example: 200
+ *               duration:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: Auction duration in days; used when endTime is not provided
+ *                 example: 7
  *               condition:
  *                 type: string
- *                 description: Item condition (e.g., Excellent, Good, Fair)
+ *                 nullable: true
+ *                 description: Item condition (optional)
+ *                 example: Excellent
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Image list; first image is used as main image when image is not provided
  *               image:
  *                 type: string
- *                 description: URL or path to item image
+ *                 nullable: true
+ *                 description: URL or path/base64 of item image (optional)
+ *                 example: /images/camera-lens.jpg
+ *               shippingOption:
+ *                 type: string
+ *                 enum: [seller, buyer]
+ *                 description: Shipping payer option (optional)
+ *               shippingCost:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Shipping cost if buyer pays (optional)
  *               endTime:
  *                 type: string
  *                 format: date-time
- *                 description: Auction end time (ISO 8601 format)
+ *                 description: Auction end time in the future (ISO 8601). If omitted, duration is used.
+ *                 example: 2026-03-15T18:30:00Z
  *             required:
  *               - title
  *               - category
- *               - startPrice
- *               - endTime
+ *               - startingPrice
+ *               - duration
  *     responses:
  *       201:
  *         description: Auction created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Auction created successfully
+ *                 data:
+ *                   type: object
  *       400:
- *         description: Invalid input data
+ *         description: Invalid input data or validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
  *       401:
  *         description: Unauthorized - no token provided
+ *       500:
+ *         description: Internal server error
  */
 router.post('/create', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { title, category, description, startPrice, condition, image, endTime } = req.body;
+    const {
+      title,
+      category,
+      description,
+      startPrice,
+      startingPrice,
+      reservePrice,
+      duration,
+      images,
+      condition,
+      image,
+      shippingOption,
+      shippingCost,
+      endTime,
+    } = req.body;
     const seller_id = req.user?.userId;
 
     if (!seller_id) {
@@ -612,23 +865,35 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
       });
     }
 
+    const resolvedStartPrice = Number(startPrice ?? startingPrice);
+
+    let resolvedEndTime = endTime as string | undefined;
+    if (!resolvedEndTime) {
+      const durationDays = Number(duration);
+      if (!Number.isNaN(durationDays) && durationDays > 0) {
+        resolvedEndTime = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
+
+    const resolvedImage = image || (Array.isArray(images) ? images[0] : null);
+
     // Validation
-    if (!title || !category || !startPrice || !endTime) {
+    if (!title || !category || Number.isNaN(resolvedStartPrice) || !resolvedEndTime) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: title, category, startPrice, endTime'
+        message: 'Missing required fields: title, category, startingPrice/startPrice, and duration/endTime'
       });
     }
 
-    if (isNaN(parseFloat(startPrice)) || parseFloat(startPrice) <= 0) {
+    if (resolvedStartPrice <= 0) {
       return res.status(400).json({
         success: false,
-        message: 'startPrice must be a positive number'
+        message: 'startingPrice/startPrice must be a positive number'
       });
     }
 
     // Validate endTime
-    const endTimeDate = new Date(endTime);
+    const endTimeDate = new Date(resolvedEndTime);
     if (isNaN(endTimeDate.getTime())) {
       return res.status(400).json({
         success: false,
@@ -647,7 +912,23 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
     await runQuery(
       `INSERT INTO auctions (title, category, description, startPrice, currentBid, image, condition, seller_id, endTime, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [title, category, description || null, startPrice, startPrice, image || null, condition || null, seller_id, endTime, 'active']
+      [
+        title,
+        category,
+        [
+          description || '',
+          reservePrice ? `\nReserve Price: ${reservePrice}` : '',
+          shippingOption ? `\nShipping Option: ${shippingOption}` : '',
+          shippingCost ? `\nShipping Cost: ${shippingCost}` : '',
+        ].join('').trim() || null,
+        resolvedStartPrice,
+        resolvedStartPrice,
+        resolvedImage || null,
+        condition || null,
+        seller_id,
+        resolvedEndTime,
+        'active',
+      ]
     );
 
     // Get the created auction

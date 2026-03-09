@@ -2,6 +2,7 @@
 import {  useState, useRef, ChangeEvent, DragEvent } from 'react';
 
 import { Listing } from '@/mocks/myListing';
+import { auctionApi } from '@/api/auctions';
 
 interface CreateListingModalProps {
   onClose: () => void;
@@ -16,6 +17,7 @@ export default function CreateListingModal({ onClose, editingListing }: CreateLi
   const [showSuccess, setShowSuccess] = useState(false);
   const [successType, setSuccessType] = useState<'publish' | 'draft'>('publish');
   const [isDragging, setIsDragging] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -108,16 +110,51 @@ export default function CreateListingModal({ onClose, editingListing }: CreateLi
     fileInputRef.current?.click();
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    const durationDays = Number(formData.duration);
+
+    if (!formData.title.trim() || !formData.category.trim()) {
+      setSubmitError('Title and category are required.');
+      return;
+    }
+
+    if (Number.isNaN(Number(formData.startingPrice)) || Number(formData.startingPrice) <= 0) {
+      setSubmitError('Starting price must be a positive number.');
+      return;
+    }
+
+    if (Number.isNaN(durationDays) || durationDays <= 0) {
+      setSubmitError('Duration must be a valid number of days.');
+      return;
+    }
+
+    setSubmitError('');
     setIsSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      await auctionApi.createAuction({
+        title: formData.title.trim(),
+        category: formData.category.trim(),
+        description: formData.description.trim() || undefined,
+        startingPrice: formData.startingPrice,
+        reservePrice: formData.reservePrice || undefined,
+        duration: formData.duration,
+        image: formData.images[0] || undefined,
+        shippingOption: formData.shippingOption,
+        shippingCost: formData.shippingCost || undefined,
+        condition: formData.condition || undefined,
+      });
+
       setIsSubmitting(false);
       setSuccessType('publish');
       setShowSuccess(true);
       setTimeout(() => {
         onClose();
       }, 2000);
-    }, 1500);
+    } catch (error) {
+      setIsSubmitting(false);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to publish listing.');
+    }
   };
 
   const handleSaveAsDraft = () => {
@@ -478,6 +515,9 @@ export default function CreateListingModal({ onClose, editingListing }: CreateLi
             </button>
           ) : (
             <div className="flex items-center gap-4">
+              {submitError && (
+                <p className="text-sm text-red-600">{submitError}</p>
+              )}
               <button
                 onClick={handleSaveAsDraft}
                 disabled={isSubmitting || isSavingDraft}
