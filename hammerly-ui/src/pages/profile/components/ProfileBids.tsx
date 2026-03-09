@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { myBids } from '@/mocks/myBids';
 
 export default function ProfileBids() {
