@@ -20,8 +20,9 @@ type AuctionRow = {
   currentBid: number;
   image: string | null;
   condition: string | null;
-  seller_id: number;
+  sellerId: number;
   status: string;
+  startTime: string;
   endTime: string;
   seller?: string | null;
   totalBids?: number;
@@ -41,17 +42,30 @@ const toTimeRemaining = (endTime: string): string => {
   return `${minutes}m`;
 };
 
-const toProgress = (startPrice: number, currentBid: number): number => {
-  if (!startPrice || startPrice <= 0) return 0;
-  return Math.min(100, Math.max(0, Math.round((currentBid / startPrice) * 100)));
+// Progress is time-based: 0% at start, 100% when auction reaches endTime.
+const toProgress = (startTime: string, endTime: string): number => {
+  const startMs = new Date(startTime).getTime();
+  const endMs = new Date(endTime).getTime();
+  const nowMs = Date.now();
+
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) {
+    return 0;
+  }
+
+  if (nowMs <= startMs) return 0;
+  if (nowMs >= endMs) return 100;
+
+  const elapsed = nowMs - startMs;
+  const total = endMs - startMs;
+  return Math.round((elapsed / total) * 100);
 };
 
 const mapAuctionForClient = (row: AuctionRow) => ({
   ...row,
   totalBids: Number(row.totalBids || 0),
-  seller: row.seller || `Seller ${row.seller_id}`,
+  seller: row.seller || `Seller ${row.sellerId}`,
   timeRemaining: toTimeRemaining(row.endTime),
-  progress: toProgress(Number(row.startPrice), Number(row.currentBid)),
+  progress: toProgress(row.startTime, row.endTime),
 });
 
 
@@ -935,10 +949,12 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
       });
     }
 
+    const resolvedStartTime = new Date().toISOString();
+
     // Create auction
     await runQuery(
-      `INSERT INTO auctions (title, category, description, startPrice, currentBid, image, condition, seller_id, endTime, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO auctions (title, category, description, startPrice, currentBid, image, condition, seller_id, startTime, endTime, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title,
         category,
@@ -953,21 +969,30 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
         resolvedImage || null,
         condition || null,
         resolvedSellerId,
+        resolvedStartTime,
         resolvedEndTime,
         'active',
       ]
     );
 
     // Get the created auction
-    const newAuction = await getOne(
-      'SELECT * FROM auctions WHERE seller_id = ? ORDER BY id DESC LIMIT 1',
+    const newAuction = await getOne<AuctionRow>(
+      `SELECT a.*, COALESCE(u.firstName || ' ' || u.lastName, NULL) AS seller,
+              COUNT(b.id) AS totalBids
+       FROM auctions a
+       LEFT JOIN users u ON u.id = a.seller_id
+       LEFT JOIN bids b ON b.auction_id = a.id
+       WHERE a.seller_id = ?
+       GROUP BY a.id
+       ORDER BY a.id DESC
+       LIMIT 1`,
       [resolvedSellerId]
     );
 
     res.status(201).json({
       success: true,
       message: 'Auction created successfully',
-      data: newAuction
+      data: newAuction ? mapAuctionForClient(newAuction) : null
     });
   } catch (error) {
     console.error('Error creating auction:', error);
