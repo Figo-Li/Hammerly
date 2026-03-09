@@ -1,6 +1,17 @@
 import db, { runQuery } from './database.js';
 
 /**
+ * Safely add a column to a table (ignores error if column already exists)
+ */
+const addColumnIfNotExists = async (table: string, column: string, type: string) => {
+  try {
+    await runQuery(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  } catch {
+    // Column already exists — ignore
+  }
+};
+
+/**
  * Initialize database schema
  */
 export const initializeDatabase = async () => {
@@ -13,10 +24,16 @@ export const initializeDatabase = async () => {
         lastName TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
+        phone TEXT DEFAULT '',
+        avatarImage TEXT DEFAULT '',
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add columns for existing databases that don't have them yet
+    await addColumnIfNotExists('users', 'phone', "TEXT DEFAULT ''");
+    await addColumnIfNotExists('users', 'avatarImage', "TEXT DEFAULT ''");
 
     // Auctions table
     await runQuery(`
@@ -62,6 +79,27 @@ export const initializeDatabase = async () => {
         UNIQUE(user_id, auction_id),
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (auction_id) REFERENCES auctions(id)
+      )
+    `);
+
+    // Payment methods table
+    await runQuery(`
+      CREATE TABLE IF NOT EXISTS payment_methods (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        cardType TEXT NOT NULL,
+        lastFour TEXT NOT NULL,
+        expiryMonth INTEGER NOT NULL,
+        expiryYear INTEGER NOT NULL,
+        cardholderName TEXT NOT NULL,
+        isDefault INTEGER DEFAULT 0,
+        billingAddress TEXT DEFAULT '',
+        billingCity TEXT DEFAULT '',
+        billingProvince TEXT DEFAULT '',
+        billingPostalCode TEXT DEFAULT '',
+        billingCountry TEXT DEFAULT '',
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
       )
     `);
 

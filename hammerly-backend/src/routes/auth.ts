@@ -115,7 +115,9 @@ router.post('/register', async (req: Request, res: Response) => {
         id: newUser.id,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
-        email: newUser.email
+        email: newUser.email,
+        phone: (newUser as any).phone || '',
+        avatarImage: (newUser as any).avatarImage || ''
       }
     });
   } catch (error) {
@@ -196,7 +198,9 @@ router.post('/login', async (req: Request, res: Response) => {
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
-        email: user.email
+        email: user.email,
+        phone: (user as any).phone || '',
+        avatarImage: (user as any).avatarImage || ''
       }
     });
   } catch (error) {
