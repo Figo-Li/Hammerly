@@ -1,7 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
-import { authApi } from '@/api/auth';
-
 interface ProfileSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -27,9 +25,9 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
   };
 
   const menuItems = [
-    { id: 'settings', label: 'Settings', icon: 'ri-settings-3-line' },
+    { id: 'settings', label: 'Settings', icon: 'ri-settings-3-line'},
     { id: 'bids', label: 'My Bids', icon: 'ri-hammer-line' },
-    { id: 'listings', label: 'My Sellings', icon: 'ri-store-2-line' },
+    { id: 'listings', label: 'My Listings', icon: 'ri-store-2-line' },
   ];
 
   return (
