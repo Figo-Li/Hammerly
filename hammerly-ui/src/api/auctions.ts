@@ -88,7 +88,10 @@ export const auctionApi = {
     try {
       const response = await fetch(
         `${API_BASE_URL}/auctions/${auctionId}/bid?bidAmount=${encodeURIComponent(String(bidAmount))}`,
-        { method: 'GET' }
+        {
+          method: 'GET',
+          headers: getAuthHeaders()
+        }
       );
       return await parseResponseOrThrow(response, 'Failed to place bid');
     } catch (error) {
