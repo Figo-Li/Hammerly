@@ -1,5 +1,5 @@
 type LoginReq = { email: string; password: string };
-type RegisterReq = { firstName: string; lastName: string; email: string; password: string };
+type RegisterReq = { firstName: string; lastName: string; email: string; password: string; phone: string };
 
 export type AuthResponse = {
   user: {
@@ -162,7 +162,27 @@ export const logoutApi = async (): Promise<{ success: boolean }> => {
 };
 
 export const authApi = {
-  register: registerApi,
+  register: async (email: string, password: string, firstName: string, lastName: string, phone: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, firstName, lastName, phone }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to register');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error during registration:', error);
+      throw error;
+    }
+  },
+
   login: loginApi,
   logout: logoutApi
 };

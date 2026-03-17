@@ -48,16 +48,17 @@ export default function Auth() {
         return;
       }
 
-      if (formData.password !== formData.confirmPassword) {
+      if (formData.password.trim() !== formData.confirmPassword.trim()) {
         setError('Passwords do not match.');
         return;
       }
 
       const data = await registerApi({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone, // Pass phone number to the API
       });
 
       useAuthStore.getState().loginSuccess({
@@ -66,10 +67,10 @@ export default function Auth() {
       });
 
       navigate('/profile');
-    } catch (err: any) {
-      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
       setError(errorMessage);
-      console.error('Register error:', err);
+      console.error('Register error:', error);
     }
   };
 
@@ -190,12 +191,12 @@ export default function Auth() {
                   <div className="relative">
                     <i className="ri-phone-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input
-                      type="tel"
+                      type="text"
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
                       className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#8B2635] focus:ring-2 focus:ring-[#8B2635]/20 text-sm"
-                      placeholder="+1 647 123 4567"
+                      placeholder="Enter your phone number"
                       required
                     />
                   </div>

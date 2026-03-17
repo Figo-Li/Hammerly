@@ -44,6 +44,9 @@ interface User {
  *               confirmPassword:
  *                 type: string
  *                 description: Confirmation of the user password
+ *               phone:
+ *                 type: string
+ *                 description: User's phone number
  *     responses:
  *       201:
  *         description: Registration successful
@@ -53,78 +56,39 @@ interface User {
 
 // POST register
 router.post('/register', async (req: Request, res: Response) => {
+  const { email, password, firstName, lastName, phone } = req.body;
+
+  if (!email || !password || !firstName || !lastName || !phone) {
+    return res.status(400).json({
+      success: false,
+      message: 'All fields are required',
+    });
+  }
+
   try {
-    const { firstName, lastName, email, password, confirmPassword } = req.body;
-
-    // Validation
-    if (!firstName || !lastName || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'All fields are required'
-      });
-    }
-
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'Passwords do not match'
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password must be at least 6 characters'
-      });
-    }
-
-    // Check if user exists
-    const existingUser = await getOne<User>('SELECT * FROM users WHERE email = ?', [email]);
+    const existingUser = await getOne('SELECT * FROM users WHERE email = ?', [email]);
     if (existingUser) {
-      return res.status(409).json({
+      return res.status(400).json({
         success: false,
-        message: 'Email already registered'
+        message: 'Email is already in use',
       });
     }
 
-    // Hash password and create user
     const hashedPassword = await hashPassword(password);
     await runQuery(
-      'INSERT INTO users (firstName, lastName, email, password) VALUES (?, ?, ?, ?)',
-      [firstName, lastName, email, hashedPassword]
+      'INSERT INTO users (email, password, firstName, lastName, phone) VALUES (?, ?, ?, ?, ?)',
+      [email, hashedPassword, firstName, lastName, phone]
     );
-
-    // Get the created user
-    const newUser = await getOne<User>('SELECT * FROM users WHERE email = ?', [email]);
-    
-    if (!newUser) {
-      return res.status(500).json({
-        success: false,
-        message: 'Error creating user'
-      });
-    }
-
-    // Generate token
-    const token = generateToken(newUser.id, newUser.email);
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      token,
-      user: {
-        id: newUser.id,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        email: newUser.email,
-        phone: (newUser as any).phone || '',
-        avatarImage: (newUser as any).avatarImage || ''
-      }
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('Error during registration:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
     });
   }
 });
