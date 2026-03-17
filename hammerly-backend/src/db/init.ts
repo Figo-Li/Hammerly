@@ -25,10 +25,6 @@ export const initializeDatabase = async () => {
         lastName TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
         phone TEXT DEFAULT '',
         avatarImage TEXT DEFAULT '',
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
