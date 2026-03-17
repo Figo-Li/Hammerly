@@ -66,6 +66,14 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 
   try {
+    const existingUser = await getOne('SELECT * FROM users WHERE email = ?', [email]);
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already in use',
+      });
+    }
+
     const hashedPassword = await hashPassword(password);
     await runQuery(
       'INSERT INTO users (email, password, firstName, lastName, phone) VALUES (?, ?, ?, ?, ?)',
