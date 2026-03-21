@@ -367,7 +367,7 @@ router.post('/profile/payment-methods', authMiddleware, async (req: Request, res
 
     const newMethod = await getOne<PaymentMethod>('SELECT * FROM payment_methods WHERE id = ?', [id]);
 
-    res.status(201).json({ success: true, message: 'Payment method added', paymentMethod: newMethod });
+    res.status(201).json({ success: true, message: 'Payment method added successfully', paymentMethod: newMethod });
   } catch (error) {
     console.error('Add payment method error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -511,6 +511,139 @@ router.get('/:id', async (req: Request, res: Response) => {
     res.json({ success: true, user });
   } catch (error) {
     console.error('Get user error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// ─── GET my bids ───────────────────────────────────────────────
+/**
+ * @swagger
+ * /api/users/my-bids:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Get all auctions the specified user has placed bids for
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the user to retrieve bids for
+ *     responses:
+ *       200:
+ *         description: Bids retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 bids:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       auctionId:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       startPrice:
+ *                         type: number
+ *                       endDate:
+ *                         type: string
+ *                         format: date-time
+ *                       bidAmount:
+ *                         type: number
+ *       400:
+ *         description: Missing userId in query parameters
+ */
+router.get('/my-bids', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.query.userId;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'Missing userId in query parameters' });
+    }
+
+    const bids = await getAll(
+      `SELECT a.id AS auctionId, a.title, a.description, a.startPrice, a.endDate, b.amount AS bidAmount
+       FROM bids b
+       JOIN auctions a ON b.auction_id = a.id
+       WHERE b.bidder_id = ?
+       ORDER BY a.endDate DESC`,
+      [userId]
+    );
+
+    res.json({ success: true, bids });
+  } catch (error) {
+    console.error('Get my bids error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// ─── GET user published auctions ───────────────────────────────
+/**
+ * @swagger
+ * /api/users/my-auctions:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Get all auctions published by the current user
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Auctions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 auctions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       startPrice:
+ *                         type: number
+ *                       currentBid:
+ *                         type: number
+ *                       startTime:
+ *                         type: string
+ *                         format: date-time
+ *                       endDate:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/my-auctions', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+
+    const auctions = await getAll(
+      `SELECT id, title, description, startPrice, currentBid, startTime, endDate
+       FROM auctions
+       WHERE seller_id = ?
+       ORDER BY createdAt DESC`,
+      [userId]
+    );
+
+    res.json({ success: true, auctions });
+  } catch (error) {
+    console.error('Get user published auctions error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
