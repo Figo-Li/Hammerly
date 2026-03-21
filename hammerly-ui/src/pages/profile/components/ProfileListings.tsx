@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { Listing, myListings } from '../../../mocks/myListing';
+import { useEffect, useState } from 'react';
+import { getSellingList } from '@/api/profile';
+import { Listing } from '../../../mocks/myListing';
 import CreateListingModal from './CreateListingModal';
-
-
 
 export default function ProfileListings() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -14,14 +13,27 @@ export default function ProfileListings() {
   // Deliver modal state
   const [showDeliverModal, setShowDeliverModal] = useState(false);
   const [deliveringListing, setDeliveringListing] = useState<Listing | null>(null);
-  const [deliverForm, setDeliverForm] = useState({ carrier: '', trackingNumber: ''});
+  const [deliverForm, setDeliverForm] = useState({ carrier: '', trackingNumber: '' });
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchSuccess, setDispatchSuccess] = useState(false);
   const [dispatchedIds, setDispatchedIds] = useState<number[]>([]);
-  
-  const [listings] = useState<Listing[]>(myListings);
+
+  const [listings, setListings] = useState<Listing[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 4;
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        const data = await getSellingList();
+        setListings(data.auctions);
+      } catch (err: any) {
+        console.error(err.message);
+      }
+    };
+
+    fetchListings();
+  }, []);
 
   const filteredListings = listings.filter(listing => {
     if (activeFilter === 'all') return true;
@@ -54,7 +66,7 @@ export default function ProfileListings() {
 
   const handleOpenDeliver = (listing: Listing) => {
     setDeliveringListing(listing);
-    setDeliverForm({ carrier: '', trackingNumber: ''});
+    setDeliverForm({ carrier: '', trackingNumber: '' });
     setDispatchSuccess(false);
     setShowDeliverModal(true);
   };
@@ -81,7 +93,6 @@ export default function ProfileListings() {
   };
 
   const isFormValid = deliverForm.carrier.trim() !== '' && deliverForm.trackingNumber.trim() !== '';
-
 
 
   return (

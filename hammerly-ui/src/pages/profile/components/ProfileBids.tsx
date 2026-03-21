@@ -1,11 +1,30 @@
-import { useState } from 'react';
-import { myBids } from '@/mocks/myBids';
+import { useEffect, useState } from 'react';
+import { getBiddingList } from '@/api/profile';
 
 export default function ProfileBids() {
   const [filter, setFilter] = useState('all');
+  const [bids, setBids] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const fetchBids = async () => {
+      try {
+        setLoading(true);
+        const data = await getBiddingList();
+        setBids(data.bids);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filteredBids = filter === 'all' ? myBids : myBids.filter(bid => bid.status === filter);
+    fetchBids();
+  }, []);
+
+  const filteredBids = filter === 'all' ? bids : bids.filter((bid: any) => bid.status === filter);
 
   const [showWonDetailModal, setShowWonDetailModal] = useState(false);
   const [wonDetailOrder, setWonDetailOrder] = useState<any | null>(null);
@@ -14,7 +33,6 @@ export default function ProfileBids() {
 
   const totalPages = Math.ceil(filteredBids.length / ITEMS_PER_PAGE);
   const paginatedBids = filteredBids.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -39,19 +57,35 @@ export default function ProfileBids() {
     return 'pending';
   };
 
-    const getWonOrderStatusConfig = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return { label: 'Payment Confirmed', color: 'bg-amber-100 text-amber-700', icon: 'ri-check-line' };
-      case 'transit':
-        return { label: 'In Transit', color: 'bg-amber-100 text-amber-700', icon: 'ri-truck-line' };
-      case 'delivered':
-        return { label: 'Delivered', color: 'bg-green-100 text-green-700', icon: 'ri-checkbox-circle-line' };
-      default:
-        return { label: status, color: 'bg-gray-100 text-gray-600', icon: 'ri-information-line' };
-    }
+  // Helper function to get configuration for won order status
+  const getWonOrderStatusConfig = (status: string) => {
+    const statusConfig: Record<string, { icon: string; label: string; color: string }> = {
+      confirmed: {
+        icon: 'ri-check-line',
+        label: 'Payment Confirmed',
+        color: 'bg-green-100 text-green-700',
+      },
+      transit: {
+        icon: 'ri-truck-line',
+        label: 'In Transit',
+        color: 'bg-blue-100 text-blue-700',
+      },
+      delivered: {
+        icon: 'ri-home-smile-line',
+        label: 'Delivered',
+        color: 'bg-emerald-100 text-emerald-700',
+      },
+    };
+
+    return statusConfig[status] || {
+      icon: 'ri-question-line',
+      label: 'Unknown Status',
+      color: 'bg-gray-100 text-gray-600',
+    };
   };
 
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="space-y-6">

@@ -522,14 +522,9 @@ router.get('/:id', async (req: Request, res: Response) => {
  *   get:
  *     tags:
  *       - Users
- *     summary: Get all auctions the specified user has placed bids for
- *     parameters:
- *       - in: query
- *         name: userId
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID of the user to retrieve bids for
+ *     summary: Get all auctions the current user has placed bids for
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: Bids retrieved successfully
@@ -558,16 +553,12 @@ router.get('/:id', async (req: Request, res: Response) => {
  *                         format: date-time
  *                       bidAmount:
  *                         type: number
- *       400:
- *         description: Missing userId in query parameters
+ *       401:
+ *         description: Unauthorized
  */
 router.get('/my-bids', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const userId = req.query.userId;
-
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'Missing userId in query parameters' });
-    }
+    const userId = req.user!.userId;
 
     const bids = await getAll(
       `SELECT a.id AS auctionId, a.title, a.description, a.startPrice, a.endDate, b.amount AS bidAmount
@@ -580,7 +571,7 @@ router.get('/my-bids', authMiddleware, async (req: Request, res: Response) => {
 
     res.json({ success: true, bids });
   } catch (error) {
-    console.error('Get my bids error:', error);
+    console.error('Get user bids error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
