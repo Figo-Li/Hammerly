@@ -116,7 +116,7 @@ const mapAuctionForClient = (row: AuctionRow) => ({
  *         description: Top 4 auctions
  */
 
-// GET top 4 auctions on home page
+// Updated to only show auctions that are not ended
 router.get('/get-top', async (req: Request, res: Response) => {
   try {
     const rows = await getAll<AuctionRow>(
@@ -125,7 +125,7 @@ router.get('/get-top', async (req: Request, res: Response) => {
        FROM auctions a
        LEFT JOIN users u ON u.id = a.seller_id
        LEFT JOIN bids b ON b.auction_id = a.id
-       WHERE a.status = 'active'
+       WHERE a.status = 'active' AND a.endTime > CURRENT_TIMESTAMP
        GROUP BY a.id
        ORDER BY a.createdAt DESC
        LIMIT 6`
@@ -136,7 +136,7 @@ router.get('/get-top', async (req: Request, res: Response) => {
               COALESCE(SUM(currentBid), 0) AS totalValue,
               COALESCE(AVG(currentBid), 0) AS averageBid
        FROM auctions
-       WHERE status = 'active'`
+       WHERE status = 'active' AND endTime > CURRENT_TIMESTAMP`
     );
 
     res.json({
@@ -253,7 +253,7 @@ router.get('/get/:id', async (req: Request, res: Response) => {
  *         description: Auction not found
  */
 
-// GET related auctions by item ID
+// Updated to only show auctions that are not ended
 router.get('/get-related/:id', async (req: Request, res: Response) => {
   try {
     const auctionId = parseInt(req.params.id);
@@ -272,7 +272,7 @@ router.get('/get-related/:id', async (req: Request, res: Response) => {
        FROM auctions a
        LEFT JOIN users u ON u.id = a.seller_id
        LEFT JOIN bids b ON b.auction_id = a.id
-       WHERE a.category = ? AND a.id != ? AND a.status = 'active'
+       WHERE a.category = ? AND a.id != ? AND a.status = 'active' AND a.endTime > CURRENT_TIMESTAMP
        GROUP BY a.id
        ORDER BY a.createdAt DESC
        LIMIT 4`,
@@ -316,7 +316,7 @@ router.get('/get-related/:id', async (req: Request, res: Response) => {
  *         description: Missing search query
  */
 
-// SEARCH auctions by title substring with pagination
+// Updated to only show auctions that are not ended
 router.get('/search', async (req: Request, res: Response) => {
   try {
     const q = (req.query.q as string) || '';
@@ -325,7 +325,9 @@ router.get('/search', async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
     const hasQuery = q.trim().length > 0;
 
-    const whereClause = hasQuery ? "WHERE a.status = 'active' AND LOWER(a.title) LIKE LOWER(?)" : "WHERE a.status = 'active'";
+    const whereClause = hasQuery
+      ? "WHERE a.status = 'active' AND a.endTime > CURRENT_TIMESTAMP AND LOWER(a.title) LIKE LOWER(?)"
+      : "WHERE a.status = 'active' AND a.endTime > CURRENT_TIMESTAMP";
     const whereParams = hasQuery ? [`%${q.trim()}%`] : [];
 
     const totalRow = await getOne<{ total: number }>(
