@@ -19,21 +19,31 @@ export default function ProfileListings() {
   const [dispatchedIds, setDispatchedIds] = useState<number[]>([]);
 
   const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 4;
 
-  useEffect(() => {
-    const fetchListings = async () => {
-      try {
-        const data = await getSellingList();
-        setListings(data.auctions);
-      } catch (err: any) {
-        console.error(err.message);
-      }
-    };
+  const fetchListings = async () => {
+    try {
+      setLoading(true);
+      const data = await getSellingList();
+      setListings(data.auctions);
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load your listings.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchListings();
+  useEffect(() => {
+    void fetchListings();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter]);
 
   const filteredListings = listings.filter(listing => {
     if (activeFilter === 'all') return true;
@@ -93,6 +103,37 @@ export default function ProfileListings() {
   };
 
   const isFormValid = deliverForm.carrier.trim() !== '' && deliverForm.trackingNumber.trim() !== '';
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i className="ri-loader-4-line animate-spin text-3xl text-gray-400 w-8 h-8 flex items-center justify-center"></i>
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Loading listings</h3>
+        <p className="text-gray-500">Fetching your current selling items from the backend.</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i className="ri-error-warning-line text-3xl text-red-500 w-8 h-8 flex items-center justify-center"></i>
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Couldn&apos;t load listings</h3>
+        <p className="text-gray-500 mb-6">{error}</p>
+        <button
+          onClick={() => void fetchListings()}
+          className="inline-flex items-center gap-2 bg-[#8B2635] text-white px-6 py-3 rounded-lg font-medium hover:bg-[#7A1F2B] transition-all cursor-pointer whitespace-nowrap"
+        >
+          <i className="ri-refresh-line w-5 h-5 flex items-center justify-center"></i>
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
 
   return (

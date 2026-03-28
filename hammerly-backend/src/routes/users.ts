@@ -33,6 +33,42 @@ interface PaymentMethod {
   createdAt: string;
 }
 
+const toTimeLeft = (endTime: string | null) => {
+  if (!endTime) return 'Draft';
+
+  const diffMs = new Date(endTime).getTime() - Date.now();
+  if (Number.isNaN(diffMs) || diffMs <= 0) {
+    return 'Ended';
+  }
+
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+};
+
+const resolveListingStatus = (status: string | null, endTime: string | null) => {
+  if (status === 'draft') return 'draft';
+  if (!endTime) return 'draft';
+  if (new Date(endTime).getTime() <= Date.now()) return 'ended';
+  return 'active';
+};
+
+const resolveBidStatus = (endTime: string, yourBid: number, currentBid: number) => {
+  const ended = new Date(endTime).getTime() <= Date.now();
+  const isHighestBid = yourBid >= currentBid;
+
+  if (ended) {
+    return isHighestBid ? 'won' : 'lost';
+  }
+
+  return isHighestBid ? 'winning' : 'outbid';
+};
+
 // ─── GET current user profile ─────────────────────────────────
 /**
  * @swagger
@@ -476,45 +512,6 @@ router.put('/profile/payment-methods/:id/default', authMiddleware, async (req: R
   }
 });
 
-// ─── GET user by ID (public) ──────────────────────────────────
-/**
- * @swagger
- * /api/users/{id}:
- *   get:
- *     tags:
- *       - Users
- *     summary: Get user by ID
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: User information retrieved
- *       404:
- *         description: User not found
- */
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const user = await getOne<Omit<User, 'email' | 'password'>>(
-      'SELECT id, firstName, lastName, avatarImage, createdAt FROM users WHERE id = ?',
-      [id]
-    );
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    res.json({ success: true, user });
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
-
 // ─── GET my bids ───────────────────────────────────────────────
 /**
  * @swagger
@@ -560,16 +557,65 @@ router.get('/my-bids', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
 
-    const bids = await getAll(
-      `SELECT a.id AS auctionId, a.title, a.description, a.startPrice, a.endDate, b.amount AS bidAmount
+    const bids = await getAll<{
+      auctionId: number;
+      title: string;
+      description: string | null;
+      startPrice: number;
+      currentBid: number;
+      image: string | null;
+      endTime: string;
+      totalBids: number;
+      yourBid: number;
+      sellerName: string | null;
+      sellerAvatar: string | null;
+    }>(
+      `SELECT
+         a.id AS auctionId,
+         a.title,
+         a.description,
+         a.startPrice,
+         a.currentBid,
+         a.image,
+         a.endTime,
+         COALESCE((SELECT COUNT(*) FROM bids all_bids WHERE all_bids.auction_id = a.id), 0) AS totalBids,
+         MAX(b.amount) AS yourBid,
+         COALESCE(s.firstName || ' ' || s.lastName, NULL) AS sellerName,
+         COALESCE(s.avatarImage, NULL) AS sellerAvatar
        FROM bids b
        JOIN auctions a ON b.auction_id = a.id
+       LEFT JOIN users s ON s.id = a.seller_id
        WHERE b.bidder_id = ?
-       ORDER BY a.endDate DESC`,
+       GROUP BY a.id
+       ORDER BY a.endTime DESC`,
       [userId]
     );
 
-    res.json({ success: true, bids });
+    res.json({
+      success: true,
+      bids: bids.map((bid) => {
+        const yourBid = Number(bid.yourBid || 0);
+        const currentBid = Number(bid.currentBid || 0);
+        const status = resolveBidStatus(bid.endTime, yourBid, currentBid);
+
+        return {
+          id: bid.auctionId,
+          title: bid.title,
+          description: bid.description || '',
+          image: bid.image || '/images/picture.jpg',
+          timeLeft: toTimeLeft(bid.endTime),
+          yourBid,
+          currentBid,
+          totalBids: Number(bid.totalBids || 0),
+          status,
+          sellerName: bid.sellerName || 'Unknown Seller',
+          sellerAvatar: bid.sellerAvatar || '/images/user.jpg',
+          purchasePrice: status === 'won' ? currentBid : yourBid,
+          orderDate: new Date(bid.endTime).toLocaleDateString('en-CA'),
+          deliverStatus: status === 'won' ? 'confirmed' : null,
+        };
+      }),
+    });
   } catch (error) {
     console.error('Get user bids error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -624,17 +670,96 @@ router.get('/my-auctions', authMiddleware, async (req: Request, res: Response) =
   try {
     const userId = req.user!.userId;
 
-    const auctions = await getAll(
-      `SELECT id, title, description, startPrice, currentBid, startTime, endDate
-       FROM auctions
-       WHERE seller_id = ?
-       ORDER BY createdAt DESC`,
+    const auctions = await getAll<{
+      id: number;
+      title: string;
+      description: string | null;
+      startPrice: number;
+      currentBid: number;
+      image: string | null;
+      status: string | null;
+      startTime: string | null;
+      endTime: string | null;
+      createdAt: string | null;
+      totalBids: number;
+      totalWatchers: number;
+    }>(
+      `SELECT
+         a.id,
+         a.title,
+         a.description,
+         a.startPrice,
+         a.currentBid,
+         a.image,
+         a.status,
+         a.startTime,
+         a.endTime,
+         a.createdAt,
+         COALESCE((SELECT COUNT(*) FROM bids b WHERE b.auction_id = a.id), 0) AS totalBids,
+         COALESCE((SELECT COUNT(*) FROM watchlist w WHERE w.auction_id = a.id), 0) AS totalWatchers
+       FROM auctions a
+       WHERE a.seller_id = ?
+       ORDER BY a.createdAt DESC`,
       [userId]
     );
 
-    res.json({ success: true, auctions });
+    res.json({
+      success: true,
+      auctions: auctions.map((auction) => ({
+        id: auction.id,
+        title: auction.title,
+        description: auction.description || '',
+        startingPrice: Number(auction.startPrice || 0),
+        currentBid: Number(auction.currentBid || 0),
+        bids: Number(auction.totalBids || 0),
+        watchers: Number(auction.totalWatchers || 0),
+        timeLeft: toTimeLeft(auction.endTime),
+        status: resolveListingStatus(auction.status, auction.endTime),
+        image: auction.image || '/images/picture.jpg',
+        createdAt: auction.createdAt || '',
+      })),
+    });
   } catch (error) {
     console.error('Get user published auctions error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// ─── GET user by ID (public) ──────────────────────────────────
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Get user by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: User information retrieved
+ *       404:
+ *         description: User not found
+ */
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = await getOne<Omit<User, 'email' | 'password'>>(
+      'SELECT id, firstName, lastName, avatarImage, createdAt FROM users WHERE id = ?',
+      [id]
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Get user error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

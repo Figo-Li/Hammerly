@@ -152,18 +152,7 @@ export const getBiddingList = async () => {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to get bidding list');
-
-  // Transform the response to match the structure of getSellingList
-  const transformedBids = data.bids.map((bid: any) => ({
-    id: bid.auctionId,
-    title: bid.title,
-    description: bid.description,
-    startPrice: bid.startPrice,
-    currentBid: bid.bidAmount,
-    endDate: bid.endDate,
-  }));
-
-  return { success: data.success, bids: transformedBids }; // Changed `auctions` to `bids` to match the expected property name
+  return data;
 };
 
 // ─── Selling List ─────────────────────────────────────────────
