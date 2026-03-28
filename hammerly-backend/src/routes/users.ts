@@ -33,6 +33,42 @@ interface PaymentMethod {
   createdAt: string;
 }
 
+const toTimeLeft = (endTime: string | null) => {
+  if (!endTime) return 'Draft';
+
+  const diffMs = new Date(endTime).getTime() - Date.now();
+  if (Number.isNaN(diffMs) || diffMs <= 0) {
+    return 'Ended';
+  }
+
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+};
+
+const resolveListingStatus = (status: string | null, endTime: string | null) => {
+  if (status === 'draft') return 'draft';
+  if (!endTime) return 'draft';
+  if (new Date(endTime).getTime() <= Date.now()) return 'ended';
+  return 'active';
+};
+
+const resolveBidStatus = (endTime: string, yourBid: number, currentBid: number) => {
+  const ended = new Date(endTime).getTime() <= Date.now();
+  const isHighestBid = yourBid >= currentBid;
+
+  if (ended) {
+    return isHighestBid ? 'won' : 'lost';
+  }
+
+  return isHighestBid ? 'winning' : 'outbid';
+};
+
 // ─── GET current user profile ─────────────────────────────────
 /**
  * @swagger
@@ -367,7 +403,7 @@ router.post('/profile/payment-methods', authMiddleware, async (req: Request, res
 
     const newMethod = await getOne<PaymentMethod>('SELECT * FROM payment_methods WHERE id = ?', [id]);
 
-    res.status(201).json({ success: true, message: 'Payment method added', paymentMethod: newMethod });
+    res.status(201).json({ success: true, message: 'Payment method added successfully', paymentMethod: newMethod });
   } catch (error) {
     console.error('Add payment method error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -472,6 +508,219 @@ router.put('/profile/payment-methods/:id/default', authMiddleware, async (req: R
     res.json({ success: true, message: 'Default payment method updated' });
   } catch (error) {
     console.error('Set default payment method error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// ─── GET my bids ───────────────────────────────────────────────
+/**
+ * @swagger
+ * /api/users/my-bids:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Get all auctions the current user has placed bids for
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Bids retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 bids:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       auctionId:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       startPrice:
+ *                         type: number
+ *                       endDate:
+ *                         type: string
+ *                         format: date-time
+ *                       bidAmount:
+ *                         type: number
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/my-bids', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+
+    const bids = await getAll<{
+      auctionId: number;
+      title: string;
+      description: string | null;
+      startPrice: number;
+      currentBid: number;
+      image: string | null;
+      endTime: string;
+      totalBids: number;
+      yourBid: number;
+      sellerName: string | null;
+      sellerAvatar: string | null;
+    }>(
+      `SELECT
+         a.id AS auctionId,
+         a.title,
+         a.description,
+         a.startPrice,
+         a.currentBid,
+         a.image,
+         a.endTime,
+         COALESCE((SELECT COUNT(*) FROM bids all_bids WHERE all_bids.auction_id = a.id), 0) AS totalBids,
+         MAX(b.amount) AS yourBid,
+         COALESCE(s.firstName || ' ' || s.lastName, NULL) AS sellerName,
+         COALESCE(s.avatarImage, NULL) AS sellerAvatar
+       FROM bids b
+       JOIN auctions a ON b.auction_id = a.id
+       LEFT JOIN users s ON s.id = a.seller_id
+       WHERE b.bidder_id = ?
+       GROUP BY a.id
+       ORDER BY a.endTime DESC`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      bids: bids.map((bid) => {
+        const yourBid = Number(bid.yourBid || 0);
+        const currentBid = Number(bid.currentBid || 0);
+        const status = resolveBidStatus(bid.endTime, yourBid, currentBid);
+
+        return {
+          id: bid.auctionId,
+          title: bid.title,
+          description: bid.description || '',
+          image: bid.image || '/images/picture.jpg',
+          timeLeft: toTimeLeft(bid.endTime),
+          yourBid,
+          currentBid,
+          totalBids: Number(bid.totalBids || 0),
+          status,
+          sellerName: bid.sellerName || 'Unknown Seller',
+          sellerAvatar: bid.sellerAvatar || '/images/user.jpg',
+          purchasePrice: status === 'won' ? currentBid : yourBid,
+          orderDate: new Date(bid.endTime).toLocaleDateString('en-CA'),
+          deliverStatus: status === 'won' ? 'confirmed' : null,
+        };
+      }),
+    });
+  } catch (error) {
+    console.error('Get user bids error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// ─── GET user published auctions ───────────────────────────────
+/**
+ * @swagger
+ * /api/users/my-auctions:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Get all auctions published by the current user
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Auctions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 auctions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       startPrice:
+ *                         type: number
+ *                       currentBid:
+ *                         type: number
+ *                       startTime:
+ *                         type: string
+ *                         format: date-time
+ *                       endDate:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/my-auctions', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+
+    const auctions = await getAll<{
+      id: number;
+      title: string;
+      description: string | null;
+      startPrice: number;
+      currentBid: number;
+      image: string | null;
+      status: string | null;
+      startTime: string | null;
+      endTime: string | null;
+      createdAt: string | null;
+      totalBids: number;
+      totalWatchers: number;
+    }>(
+      `SELECT
+         a.id,
+         a.title,
+         a.description,
+         a.startPrice,
+         a.currentBid,
+         a.image,
+         a.status,
+         a.startTime,
+         a.endTime,
+         a.createdAt,
+         COALESCE((SELECT COUNT(*) FROM bids b WHERE b.auction_id = a.id), 0) AS totalBids,
+         COALESCE((SELECT COUNT(*) FROM watchlist w WHERE w.auction_id = a.id), 0) AS totalWatchers
+       FROM auctions a
+       WHERE a.seller_id = ?
+       ORDER BY a.createdAt DESC`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      auctions: auctions.map((auction) => ({
+        id: auction.id,
+        title: auction.title,
+        description: auction.description || '',
+        startingPrice: Number(auction.startPrice || 0),
+        currentBid: Number(auction.currentBid || 0),
+        bids: Number(auction.totalBids || 0),
+        watchers: Number(auction.totalWatchers || 0),
+        timeLeft: toTimeLeft(auction.endTime),
+        status: resolveListingStatus(auction.status, auction.endTime),
+        image: auction.image || '/images/picture.jpg',
+        createdAt: auction.createdAt || '',
+      })),
+    });
+  } catch (error) {
+    console.error('Get user published auctions error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

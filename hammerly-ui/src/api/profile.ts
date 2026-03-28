@@ -143,3 +143,25 @@ export const setDefaultPaymentMethod = async (id: number) => {
   if (!res.ok) throw new Error(data.message || 'Failed to set default payment method');
   return data;
 };
+
+// ─── Bidding List ─────────────────────────────────────────────
+
+export const getBiddingList = async () => {
+  const res = await fetch(`${API_BASE_URL}/users/my-bids`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to get bidding list');
+  return data;
+};
+
+// ─── Selling List ─────────────────────────────────────────────
+
+export const getSellingList = async () => {
+  const res = await fetch(`${API_BASE_URL}/users/my-auctions`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to get selling list');
+  return data;
+};
