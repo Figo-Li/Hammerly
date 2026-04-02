@@ -739,6 +739,237 @@ router.get('/is-watched/:id', authMiddleware, async (req: Request, res: Response
 
 /**
  * @swagger
+ * /api/auctions/save-draft:
+ *   post:
+ *     tags:
+ *       - Auctions
+ *     summary: Save an auction as a draft
+ *     description: Creates a draft auction owned by the authenticated user. Drafts can be completed later before publishing.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Auction title (optional for drafts)
+ *                 example: Vintage Camera Lens
+ *               category:
+ *                 type: string
+ *                 description: Category of the item (optional for drafts)
+ *                 example: Collectibles
+ *               description:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Detailed description of the item (optional)
+ *                 example: Well-maintained lens with minor cosmetic wear.
+ *               startPrice:
+ *                 type: number
+ *                 minimum: 0.01
+ *                 description: Starting bid price (optional for drafts)
+ *                 example: 120
+ *               startingPrice:
+ *                 type: number
+ *                 minimum: 0.01
+ *                 description: Starting bid price (legacy-compatible field)
+ *                 example: 120
+ *               reservePrice:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Reserve price (optional)
+ *                 example: 200
+ *               duration:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: Auction duration in days
+ *                 example: 7
+ *               condition:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Item condition (optional)
+ *                 example: Excellent
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Image list; first image is used as main image when image is not provided
+ *               image:
+ *                 type: string
+ *                 nullable: true
+ *                 description: URL or path/base64 of item image (optional)
+ *                 example: /images/camera-lens.jpg
+ *               shippingOption:
+ *                 type: string
+ *                 enum: [seller, buyer]
+ *                 description: Shipping payer option (optional)
+ *               shippingCost:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Shipping cost if buyer pays (optional)
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Auction end time in the future (ISO 8601). Optional for drafts.
+ *                 example: 2026-03-15T18:30:00Z
+ *     responses:
+ *       201:
+ *         description: Draft saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Draft saved successfully
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Invalid input data or validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized - no token provided
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/save-draft', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const {
+      title,
+      category,
+      description,
+      startPrice,
+      startingPrice,
+      reservePrice,
+      duration,
+      images,
+      condition,
+      image,
+      shippingOption,
+      shippingCost,
+      endTime,
+    } = req.body;
+    
+    const authSellerId = req.user?.userId;
+
+    if (!authSellerId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
+    const resolvedStartPrice = startPrice ?? startingPrice ? Number(startPrice ?? startingPrice) : 0;
+    const resolvedImage = image || (Array.isArray(images) ? images[0] : null);
+
+    // For drafts, we're more lenient with validation - only need seller_id
+    // endTime is optional for drafts, we'll calculate it if duration is provided
+    let resolvedEndTime = endTime as string | undefined;
+    if (!resolvedEndTime && duration) {
+      const durationDays = Number(duration);
+      if (!Number.isNaN(durationDays) && durationDays > 0) {
+        resolvedEndTime = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
+
+    // If endTime is provided, validate it
+    if (resolvedEndTime) {
+      const endTimeDate = new Date(resolvedEndTime);
+      if (isNaN(endTimeDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid endTime format. Use ISO 8601 format (e.g., 2026-03-15T18:30:00Z)'
+        });
+      }
+
+      if (endTimeDate <= new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Auction end time must be in the future'
+        });
+      }
+    }
+
+    // Validate startPrice if provided
+    if (resolvedStartPrice && resolvedStartPrice <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'startingPrice/startPrice must be a positive number'
+      });
+    }
+
+    const resolvedStartTime = new Date().toISOString();
+
+    // Create draft auction
+    await runQuery(
+      `INSERT INTO auctions (title, category, description, startPrice, currentBid, image, condition, seller_id, startTime, endTime, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        title || '',
+        category || '',
+        [
+          description || '',
+          reservePrice ? `\nReserve Price: ${reservePrice}` : '',
+          shippingOption ? `\nShipping Option: ${shippingOption}` : '',
+          shippingCost ? `\nShipping Cost: ${shippingCost}` : '',
+        ].join('').trim() || null,
+        resolvedStartPrice,
+        resolvedStartPrice,
+        resolvedImage || null,
+        condition || null,
+        authSellerId,
+        resolvedStartTime,
+        resolvedEndTime || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Default to 7 days if not specified
+        'draft',
+      ]
+    );
+
+    // Get the saved draft
+    const newDraft = await getOne<AuctionRow>(
+      `SELECT a.*, COALESCE(u.firstName || ' ' || u.lastName, NULL) AS seller,
+              COUNT(b.id) AS totalBids
+       FROM auctions a
+       LEFT JOIN users u ON u.id = a.seller_id
+       LEFT JOIN bids b ON b.auction_id = a.id
+       WHERE a.seller_id = ? AND a.status = 'draft'
+       GROUP BY a.id
+       ORDER BY a.id DESC
+       LIMIT 1`,
+      [authSellerId]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Draft saved successfully',
+      data: newDraft ? mapAuctionForClient(newDraft) : null
+    });
+  } catch (error) {
+    console.error('Error saving draft:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * @swagger
  * /api/auctions/create:
  *   post:
  *     tags:
