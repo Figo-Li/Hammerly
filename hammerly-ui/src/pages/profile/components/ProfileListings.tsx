@@ -241,6 +241,12 @@ export default function ProfileListings() {
                 ) : listing.status === 'active' ? (
                   <>
                     <button 
+                      onClick={() => handleEditListing(listing)}
+                      className="flex-1 border border-gray-200 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      Edit
+                    </button>
+                    <button 
                       onClick={() => handleEndAuction(listing.id)}
                       className="flex-1 border border-red-200 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-all cursor-pointer whitespace-nowrap"
                     >

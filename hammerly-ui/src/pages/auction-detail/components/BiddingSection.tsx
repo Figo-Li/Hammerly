@@ -115,18 +115,6 @@ export default function BiddingSection({ auction }: BiddingSectionProps) {
           <p className="text-sm text-gray-600 mt-1">12 bids • Minimum bid: ${(auction.currentBid + 25).toLocaleString()}</p>
         </div>
 
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
-            <span>Bidding Progress</span>
-            <span>{auction.progress}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div 
-              className="bg-[#8B2635] h-3 rounded-full transition-all duration-300"
-              style={{ width: `${auction.progress}%` }}
-            ></div>
-          </div>
-        </div>
 
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">Your Bid Amount</label>
