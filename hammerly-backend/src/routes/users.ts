@@ -53,6 +53,12 @@ const toTimeLeft = (endTime: string | null) => {
 
 const resolveListingStatus = (status: string | null, endTime: string | null) => {
   if (status === 'draft') return 'draft';
+  if (status === 'ended') return 'ended';
+  if (status === 'activate' || status === 'active') {
+    if (!endTime) return 'active';
+    if (new Date(endTime).getTime() <= Date.now()) return 'ended';
+    return 'active';
+  }
   if (!endTime) return 'draft';
   if (new Date(endTime).getTime() <= Date.now()) return 'ended';
   return 'active';
@@ -705,19 +711,23 @@ router.get('/my-auctions', authMiddleware, async (req: Request, res: Response) =
 
     res.json({
       success: true,
-      auctions: auctions.map((auction) => ({
-        id: auction.id,
-        title: auction.title,
-        description: auction.description || '',
-        startingPrice: Number(auction.startPrice || 0),
-        currentBid: Number(auction.currentBid || 0),
-        bids: Number(auction.totalBids || 0),
-        watchers: Number(auction.totalWatchers || 0),
-        timeLeft: toTimeLeft(auction.endTime),
-        status: resolveListingStatus(auction.status, auction.endTime),
-        image: auction.image || '/images/picture.jpg',
-        createdAt: auction.createdAt || '',
-      })),
+      auctions: auctions.map((auction) => {
+        const resolvedStatus = resolveListingStatus(auction.status, auction.endTime);
+
+        return {
+          id: auction.id,
+          title: auction.title,
+          description: auction.description || '',
+          startingPrice: Number(auction.startPrice || 0),
+          currentBid: Number(auction.currentBid || 0),
+          bids: Number(auction.totalBids || 0),
+          watchers: Number(auction.totalWatchers || 0),
+          timeLeft: resolvedStatus === 'draft' ? 'Draft' : resolvedStatus === 'ended' ? 'Ended' : toTimeLeft(auction.endTime),
+          status: resolvedStatus,
+          image: auction.image || '/images/picture.jpg',
+          createdAt: auction.createdAt || '',
+        };
+      }),
     });
   } catch (error) {
     console.error('Get user published auctions error:', error);

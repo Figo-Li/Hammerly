@@ -125,17 +125,9 @@ export default function AuctionCard({ auction, viewType }: AuctionCardProps) {
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-          <div 
-            className="bg-[#8B2635] h-2 rounded-full transition-all duration-300"
-            style={{ width: `${auction.progress}%` }}
-          ></div>
-        </div>
 
         {/* Additional Info */}
-        <div className="flex justify-between items-center text-sm text-gray-600">
-          <span>{auction.totalBids || Math.floor(Math.random() * 15 + 5)} bids</span>
+        <div className="flex justify-end items-center text-sm text-gray-600">
           <span>Condition: {auction.condition || 'Good'}</span>
         </div>
       </div>

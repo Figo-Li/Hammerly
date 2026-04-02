@@ -918,7 +918,7 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
       }
     }
 
-    const resolvedImage = image || (Array.isArray(images) ? images[0] : null);
+    const resolvedImage = image || (Array.isArray(images) ? images[0] : '/images/picture.jpg');
 
     // Validation
     if (!title || !category || Number.isNaN(resolvedStartPrice) || !resolvedEndTime) {
@@ -968,7 +968,7 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
         ].join('').trim() || null,
         resolvedStartPrice,
         resolvedStartPrice,
-        resolvedImage || null,
+        resolvedImage || '/images/picture.jpg',
         condition || null,
         resolvedSellerId,
         resolvedStartTime,
@@ -998,6 +998,185 @@ router.post('/create', authMiddleware, async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error creating auction:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auctions/end/{id}:
+ *   patch:
+ *     tags:
+ *       - Auctions
+ *     summary: End an auction
+ *     description: Marks an auction as ended. Only the owner can end their auction.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the auction to end
+ *     responses:
+ *       200:
+ *         description: Auction ended successfully
+ *       400:
+ *         description: Invalid auction id
+ *       401:
+ *         description: Unauthorized - no token provided
+ *       403:
+ *         description: Forbidden - auction does not belong to the user
+ *       404:
+ *         description: Auction not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/end/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const authSellerId = req.user?.userId;
+    if (!authSellerId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
+    const auctionId = Number(req.params.id);
+    if (Number.isNaN(auctionId) || auctionId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid auction id'
+      });
+    }
+
+    const auction = await getOne<{ id: number; seller_id: number; status: string }>(
+      'SELECT id, seller_id, status FROM auctions WHERE id = ?',
+      [auctionId]
+    );
+
+    if (!auction) {
+      return res.status(404).json({
+        success: false,
+        message: 'Auction not found'
+      });
+    }
+
+    if (auction.seller_id !== authSellerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only end your own auctions'
+      });
+    }
+
+    if (auction.status === 'ended') {
+      return res.json({
+        success: true,
+        message: 'Auction is already ended'
+      });
+    }
+
+    await runQuery(
+      "UPDATE auctions SET status = 'ended', endTime = CURRENT_TIMESTAMP WHERE id = ?",
+      [auctionId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Auction ended successfully'
+    });
+  } catch (error) {
+    console.error('Error ending auction:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auctions/delete/{id}:
+ *   delete:
+ *     tags:
+ *       - Auctions
+ *     summary: Delete an auction
+ *     description: Deletes an auction owned by the authenticated user.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the auction to delete
+ *     responses:
+ *       200:
+ *         description: Auction deleted successfully
+ *       400:
+ *         description: Invalid auction id
+ *       401:
+ *         description: Unauthorized - no token provided
+ *       403:
+ *         description: Forbidden - auction does not belong to the user
+ *       404:
+ *         description: Auction not found
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/delete/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const authSellerId = req.user?.userId;
+    if (!authSellerId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
+    const auctionId = Number(req.params.id);
+    if (Number.isNaN(auctionId) || auctionId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid auction id'
+      });
+    }
+
+    const auction = await getOne<{ id: number; seller_id: number }>(
+      'SELECT id, seller_id FROM auctions WHERE id = ?',
+      [auctionId]
+    );
+
+    if (!auction) {
+      return res.status(404).json({
+        success: false,
+        message: 'Auction not found'
+      });
+    }
+
+    if (auction.seller_id !== authSellerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only delete your own auctions'
+      });
+    }
+
+    // Remove dependent records first because FK constraints do not use ON DELETE CASCADE.
+    await runQuery('DELETE FROM bids WHERE auction_id = ?', [auctionId]);
+    await runQuery('DELETE FROM watchlist WHERE auction_id = ?', [auctionId]);
+    await runQuery('DELETE FROM auctions WHERE id = ?', [auctionId]);
+
+    res.json({
+      success: true,
+      message: 'Auction deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting auction:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'

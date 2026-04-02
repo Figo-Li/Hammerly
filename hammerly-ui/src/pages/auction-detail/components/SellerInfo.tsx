@@ -58,12 +58,6 @@ export default function SellerInfo() {
             Contact Seller
           </div>
         </button>
-        <button className="w-full py-3 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer text-sm font-medium whitespace-nowrap">
-          <div className="flex items-center justify-center gap-2">
-            <i className="ri-store-2-line"></i>
-            View All Items
-          </div>
-        </button>
       </div>
 
       {/* Recent Reviews */}
