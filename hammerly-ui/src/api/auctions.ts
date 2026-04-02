@@ -209,5 +209,19 @@ export const auctionApi = {
       console.error('Error deleting auction:', error);
       throw error;
     }
+  },
+
+  // End an auction listing
+  endAuction: async (auctionId: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auctions/end/${auctionId}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders()
+      });
+      return await parseResponseOrThrow(response, 'Failed to end auction');
+    } catch (error) {
+      console.error('Error ending auction:', error);
+      throw error;
+    }
   }
 };

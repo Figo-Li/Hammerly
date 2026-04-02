@@ -112,7 +112,7 @@ export default function BiddingSection({ auction }: BiddingSectionProps) {
         <div className="mb-6">
           <p className="text-sm text-gray-500 mb-1">Current Bid</p>
           <p className="text-4xl font-bold text-[#8B2635]">${auction.currentBid.toLocaleString()}</p>
-          <p className="text-sm text-gray-600 mt-1">12 bids • Minimum bid: ${(auction.currentBid + 25).toLocaleString()}</p>
+          <p className="text-sm text-gray-600 mt-1">Minimum bid: ${(auction.currentBid + 25).toLocaleString()}</p>
         </div>
 
 

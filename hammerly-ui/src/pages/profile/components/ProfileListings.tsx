@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSellingList } from '@/api/profile';
+import { auctionApi } from '@/api/auctions';
 import { Listing } from '../../../mocks/myListing';
 import CreateListingModal from './CreateListingModal';
 
@@ -9,6 +10,8 @@ export default function ProfileListings() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'ended'>('all');
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [endingListingId, setEndingListingId] = useState<number | null>(null);
+  const [isEndingAuction, setIsEndingAuction] = useState(false);
+  const [endAuctionError, setEndAuctionError] = useState<string | null>(null);
 
   // Deliver modal state
   const [showDeliverModal, setShowDeliverModal] = useState(false);
@@ -63,23 +66,42 @@ export default function ProfileListings() {
   };
 
   const handleEndAuction = (listingId: number) => {
+    setEndAuctionError(null);
     setEndingListingId(listingId);
     setShowEndConfirm(true);
   };
 
-  const confirmEndAuction = () => {
-    // TODO: call API to end the auction
-    console.log('Ending auction:', endingListingId);
-    setShowEndConfirm(false);
-    setEndingListingId(null);
+  const confirmEndAuction = async () => {
+    if (!endingListingId) return;
+
+    try {
+      setIsEndingAuction(true);
+      setEndAuctionError(null);
+      await auctionApi.endAuction(endingListingId);
+
+      setListings((prev) =>
+        prev.map((listing) =>
+          listing.id === endingListingId
+            ? { ...listing, status: 'ended', timeLeft: 'Ended' }
+            : listing
+        )
+      );
+
+      setShowEndConfirm(false);
+      setEndingListingId(null);
+    } catch (err: any) {
+      setEndAuctionError(err?.message || 'Failed to end auction.');
+    } finally {
+      setIsEndingAuction(false);
+    }
   };
 
-  const handleOpenDeliver = (listing: Listing) => {
-    setDeliveringListing(listing);
-    setDeliverForm({ carrier: '', trackingNumber: '' });
-    setDispatchSuccess(false);
-    setShowDeliverModal(true);
-  };
+  // const handleOpenDeliver = (listing: Listing) => {
+  //   setDeliveringListing(listing);
+  //   setDeliverForm({ carrier: '', trackingNumber: '' });
+  //   setDispatchSuccess(false);
+  //   setShowDeliverModal(true);
+  // };
 
   const handleCloseDeliverModal = () => {
     setShowDeliverModal(false);
@@ -252,12 +274,13 @@ export default function ProfileListings() {
                     Dispatched ✓
                   </div>
                 ) : (
-                  <button
-                    onClick={() => handleOpenDeliver(listing)}
-                    className="flex-1 bg-[#8B2635] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#7A1F2B] transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    Update Delivery Info
-                  </button>
+                  // <button
+                  //   onClick={() => handleOpenDeliver(listing)}
+                  //   className="flex-1 bg-[#8B2635] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#7A1F2B] transition-all cursor-pointer whitespace-nowrap"
+                  // >
+                  //   Update Delivery Info
+                  // </button>
+                  <></>
                 )}
               </div>
             </div>
@@ -348,18 +371,27 @@ export default function ProfileListings() {
             </p>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowEndConfirm(false)}
+                onClick={() => {
+                  setShowEndConfirm(false);
+                  setEndingListingId(null);
+                  setEndAuctionError(null);
+                }}
+                disabled={isEndingAuction}
                 className="flex-1 border border-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all cursor-pointer whitespace-nowrap"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmEndAuction}
-                className="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-all cursor-pointer whitespace-nowrap"
+                disabled={isEndingAuction}
+                className="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-all cursor-pointer whitespace-nowrap disabled:opacity-60"
               >
-                End Auction
+                {isEndingAuction ? 'Ending...' : 'End Auction'}
               </button>
             </div>
+            {endAuctionError && (
+              <p className="text-sm text-red-600 mt-3 text-center">{endAuctionError}</p>
+            )}
           </div>
         </div>
       )}
