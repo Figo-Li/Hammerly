@@ -160,18 +160,6 @@ export default function CreateListingModal({ onClose, editingListing }: CreateLi
     }
   };
 
-  const handleSaveAsDraft = () => {
-    setIsSavingDraft(true);
-    setTimeout(() => {
-      setIsSavingDraft(false);
-      setSuccessType('draft');
-      setShowSuccess(true);
-      setTimeout(() => {
-        onClose();
-      }, 2000);
-    }, 1500);
-  };
-
   if (showSuccess) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -521,13 +509,6 @@ export default function CreateListingModal({ onClose, editingListing }: CreateLi
               {submitError && (
                 <p className="text-sm text-red-600">{submitError}</p>
               )}
-              <button
-                onClick={handleSaveAsDraft}
-                disabled={isSubmitting || isSavingDraft}
-                className="text-gray-600 font-medium underline hover:text-gray-900 transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
-              >
-                {isSavingDraft ? 'Saving...' : 'Save as Draft'}
-              </button>
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting || isSavingDraft}

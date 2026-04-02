@@ -6,7 +6,7 @@ import CreateListingModal from './CreateListingModal';
 export default function ProfileListings() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'ended' | 'draft'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'ended'>('all');
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [endingListingId, setEndingListingId] = useState<number | null>(null);
 
@@ -142,7 +142,7 @@ export default function ProfileListings() {
       {/* Filter Tabs */}
       <div className="flex items-center justify-between pt-4">
         <div className="bg-white rounded-xl shadow-sm p-2 inline-flex gap-1">
-          {(['all', 'active', 'ended', 'draft'] as const).map((filter) => (
+          {(['all', 'active', 'ended'] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
@@ -156,7 +156,6 @@ export default function ProfileListings() {
               {filter === 'all' && ` (${listings.length})`}
               {filter === 'active' && ` (${listings.filter(l => l.status === 'active').length})`}
               {filter === 'ended' && ` (${listings.filter(l => l.status === 'ended').length})`}
-              {filter === 'draft' && ` (${listings.filter(l => l.status === 'draft').length})`}
             </button>
           ))}
         </div>
@@ -240,12 +239,6 @@ export default function ProfileListings() {
                   </>
                 ) : listing.status === 'active' ? (
                   <>
-                    <button 
-                      onClick={() => handleEditListing(listing)}
-                      className="flex-1 border border-gray-200 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all cursor-pointer whitespace-nowrap"
-                    >
-                      Edit
-                    </button>
                     <button 
                       onClick={() => handleEndAuction(listing.id)}
                       className="flex-1 border border-red-200 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-all cursor-pointer whitespace-nowrap"

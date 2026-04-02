@@ -195,5 +195,19 @@ export const auctionApi = {
       console.error('Error creating auction:', error);
       throw error;
     }
+  },
+
+  // Delete an auction listing
+  deleteAuction: async (auctionId: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auctions/delete/${auctionId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      return await parseResponseOrThrow(response, 'Failed to delete auction');
+    } catch (error) {
+      console.error('Error deleting auction:', error);
+      throw error;
+    }
   }
 };
