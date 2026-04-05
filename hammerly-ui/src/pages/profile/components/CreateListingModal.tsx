@@ -7,17 +7,16 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 interface CreateListingModalProps {
   onClose: () => void;
+  onSuccess?: () => void | Promise<void>;
   editingListing?: Listing | null;
 }
 
-export default function CreateListingModal({ onClose, editingListing }: CreateListingModalProps) {
+export default function CreateListingModal({ onClose, onSuccess, editingListing }: CreateListingModalProps) {
   const { user } = useAuthStore();
   const isEditing = !!editingListing;
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSavingDraft, setIsSavingDraft] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successType, setSuccessType] = useState<'publish' | 'draft'>('publish');
+  const isSavingDraft = false;
   const [isDragging, setIsDragging] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -148,49 +147,15 @@ export default function CreateListingModal({ onClose, editingListing }: CreateLi
         condition: formData.condition || undefined,
       });
 
+      await onSuccess?.();
+
       setIsSubmitting(false);
-      setSuccessType('publish');
-      setShowSuccess(true);
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+      onClose();
     } catch (error) {
       setIsSubmitting(false);
       setSubmitError(error instanceof Error ? error.message : 'Failed to publish listing.');
     }
   };
-
-  if (showSuccess) {
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center">
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
-            successType === 'draft' ? 'bg-amber-100' : 'bg-emerald-100'
-          }`}>
-            <i className={`text-4xl w-10 h-10 flex items-center justify-center ${
-              successType === 'draft' 
-                ? 'ri-draft-line text-amber-600' 
-                : 'ri-check-line text-emerald-600'
-            }`}></i>
-          </div>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 mb-2">
-            {isEditing 
-              ? (successType === 'draft' ? 'Draft Updated!' : 'Listing Updated!')
-              : (successType === 'draft' ? 'Draft Saved!' : 'Listing Created!')}
-          </h2>
-          <p className="text-gray-500">
-            {isEditing 
-              ? (successType === 'draft' 
-                  ? 'Your listing has been saved as a draft.' 
-                  : 'Your auction listing has been successfully updated.')
-              : (successType === 'draft'
-                  ? 'Your listing has been saved as a draft. You can publish it later.'
-                  : 'Your auction has been successfully published and is now live.')}
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">

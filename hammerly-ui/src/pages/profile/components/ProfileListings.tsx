@@ -65,6 +65,10 @@ export default function ProfileListings() {
     setEditingListing(null);
   };
 
+  const handleListingSaved = async () => {
+    await fetchListings();
+  };
+
   const handleEndAuction = (listingId: number) => {
     setEndAuctionError(null);
     setEndingListingId(listingId);
@@ -235,16 +239,7 @@ export default function ProfileListings() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                <span className="flex items-center gap-1">
-                  <i className="ri-hammer-line w-4 h-4 flex items-center justify-center"></i>
-                  {listing.bids} bids
-                </span>
-                <span className="flex items-center gap-1">
-                  <i className="ri-eye-line w-4 h-4 flex items-center justify-center"></i>
-                  {listing.watchers} watchers
-                </span>
-              </div>
+              
 
               <div className="flex items-center gap-2">
                 {listing.status === 'draft' ? (
@@ -355,7 +350,7 @@ export default function ProfileListings() {
 
       {/* Create/Edit Listing Modal */}
       {showCreateModal && (
-        <CreateListingModal onClose={handleCloseModal} editingListing={editingListing} />
+        <CreateListingModal onClose={handleCloseModal} onSuccess={handleListingSaved} editingListing={editingListing} />
       )}
 
       {/* End Auction Confirmation Modal */}

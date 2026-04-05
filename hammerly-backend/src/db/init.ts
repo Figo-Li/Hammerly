@@ -18,14 +18,14 @@ export const initializeDatabase = async () => {
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         phone TEXT DEFAULT '',
-        avatarImage TEXT DEFAULT '',
+        avatarImage TEXT DEFAULT '/images/user.jpg',
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
     await addColumnIfNotExists('users', 'phone', "TEXT DEFAULT ''");
-    await addColumnIfNotExists('users', 'avatarImage', "TEXT DEFAULT ''");
+    await addColumnIfNotExists('users', 'avatarImage', "TEXT DEFAULT '/images/user.jpg'");
     await addColumnIfNotExists('users', 'updatedAt', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
 
     await runQuery(`
@@ -84,6 +84,7 @@ export const initializeDatabase = async () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         cardType TEXT NOT NULL,
+        cardNumber TEXT DEFAULT '',
         lastFour TEXT NOT NULL,
         expiryMonth INTEGER NOT NULL,
         expiryYear INTEGER NOT NULL,
@@ -98,6 +99,8 @@ export const initializeDatabase = async () => {
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
     `);
+
+    await addColumnIfNotExists('payment_methods', 'cardNumber', "TEXT DEFAULT ''");
 
     console.log('Database schema is ready. Existing local data was preserved.');
   } catch (error) {

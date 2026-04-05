@@ -14,6 +14,8 @@ import {
   type PaymentMethod,
 } from '@/api/profile';
 
+const formatCardNumber = (cardNumber: string) => cardNumber.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
+
 export default function ProfileSettings() {
   const [activeSection, setActiveSection] = useState('profile');
   const user = useAuthStore(state => state.user);
@@ -37,7 +39,7 @@ export default function ProfileSettings() {
   const [showAddCard, setShowAddCard] = useState(false);
   const [newCard, setNewCard] = useState({
     cardType: 'VISA',
-    lastFour: '',
+    cardNumber: '',
     expiryMonth: 1,
     expiryYear: new Date().getFullYear() + 1,
     cardholderName: '',
@@ -75,7 +77,7 @@ export default function ProfileSettings() {
       }
     };
     loadProfile();
-  }, []);
+  }, [updateUser]);
 
   // Load payment methods when switching to that tab
   useEffect(() => {
@@ -214,8 +216,10 @@ export default function ProfileSettings() {
   // ─── Payment method handlers ─────────────────────────────────
   const handleAddCard = async () => {
     setError('');
-    if (!newCard.lastFour || newCard.lastFour.length !== 4 || !/^\d{4}$/.test(newCard.lastFour)) {
-      setError('Please enter the last 4 digits of the card');
+    const sanitizedCardNumber = newCard.cardNumber.replace(/\D/g, '');
+
+    if (!/^\d{12,19}$/.test(sanitizedCardNumber)) {
+      setError('Please enter a valid card number');
       return;
     }
     if (!newCard.cardholderName) {
@@ -225,11 +229,14 @@ export default function ProfileSettings() {
 
     setLoading(true);
     try {
-      await addPaymentMethod(newCard);
+      await addPaymentMethod({
+        ...newCard,
+        cardNumber: sanitizedCardNumber,
+      });
       await loadPaymentMethods();
       setShowAddCard(false);
       setNewCard({
-        cardType: 'VISA', lastFour: '', expiryMonth: 1,
+        cardType: 'VISA', cardNumber: '', expiryMonth: 1,
         expiryYear: new Date().getFullYear() + 1, cardholderName: '',
         isDefault: false, billingAddress: '', billingCity: '',
         billingProvince: '', billingPostalCode: '', billingCountry: '',
@@ -498,7 +505,7 @@ export default function ProfileSettings() {
                     <span className="text-white text-xs font-bold">{pm.cardType}</span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">•••• •••• •••• {pm.lastFour}</p>
+                    <p className="font-medium text-gray-900">{formatCardNumber(pm.cardNumber)}</p>
                     <p className="text-sm text-gray-500">Expires {String(pm.expiryMonth).padStart(2, '0')}/{pm.expiryYear}</p>
                   </div>
                 </div>
@@ -543,13 +550,14 @@ export default function ProfileSettings() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last 4 Digits</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
                   <input
                     type="text"
-                    maxLength={4}
-                    placeholder="0000"
-                    value={newCard.lastFour}
-                    onChange={e => setNewCard(c => ({ ...c, lastFour: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                    inputMode="numeric"
+                    maxLength={23}
+                    placeholder="1234 5678 9012 3456"
+                    value={formatCardNumber(newCard.cardNumber)}
+                    onChange={e => setNewCard(c => ({ ...c, cardNumber: e.target.value.replace(/\D/g, '').slice(0, 19) }))}
                     className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-[#8B2635] outline-none text-sm"
                   />
                 </div>

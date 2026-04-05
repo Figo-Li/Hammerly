@@ -80,7 +80,7 @@ export const removeAvatar = async () => {
 export type PaymentMethod = {
   id: number;
   cardType: string;
-  lastFour: string;
+  cardNumber: string;
   expiryMonth: number;
   expiryYear: number;
   cardholderName: string;
@@ -103,7 +103,7 @@ export const getPaymentMethods = async (): Promise<{ success: boolean; paymentMe
 
 export const addPaymentMethod = async (payload: {
   cardType: string;
-  lastFour: string;
+  cardNumber: string;
   expiryMonth: number;
   expiryYear: number;
   cardholderName: string;
