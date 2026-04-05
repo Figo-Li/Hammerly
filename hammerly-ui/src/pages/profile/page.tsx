@@ -9,9 +9,16 @@ import ProfileListings from './components/ProfileListings';
 import ProfileSettings from './components/ProfileSettings';
 import { useAuthStore } from '@/store/useAuthStore';
 
+const PROFILE_TAB_STORAGE_KEY = 'profile-active-tab';
+const DEFAULT_PROFILE_TAB = 'settings';
+const PROFILE_TABS = new Set(['settings', 'bids', 'listings']);
+
 export default function Profile() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('settings');
+  const [activeTab, setActiveTab] = useState(() => {
+    const storedTab = localStorage.getItem(PROFILE_TAB_STORAGE_KEY);
+    return storedTab && PROFILE_TABS.has(storedTab) ? storedTab : DEFAULT_PROFILE_TAB;
+  });
   const { isLoggedIn, user } = useAuthStore();
 
   useEffect(() => {
@@ -20,6 +27,14 @@ export default function Profile() {
       navigate('/auth');
     }
   }, [isLoggedIn, user, navigate]);
+
+  useEffect(() => {
+    localStorage.setItem(PROFILE_TAB_STORAGE_KEY, activeTab);
+  }, [activeTab]);
+
+  if (!isLoggedIn || !user) {
+    return null;
+  }
 
   const renderContent = () => {
     switch (activeTab) {

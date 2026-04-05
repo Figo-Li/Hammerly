@@ -9,7 +9,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
   const navigate = useNavigate();
   const { isLoggedIn, user } = useAuthStore(); // Get login state and user from the store
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || !user) {
     return null; // If not logged in, don't render the sidebar
   }
 
@@ -36,7 +36,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab }: ProfileSideb
       <div className="text-center mb-6 pb-6 border-b border-gray-100">
         <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden bg-gradient-to-br from-[#8B2635] to-[#C4A484]">
           <img
-            src={user.avatarImage || "/images/user.jpg"}
+            src={user.avatarImage || '/images/user.jpg'}
             alt="Profile"
             className="w-full h-full object-cover object-top"
           />

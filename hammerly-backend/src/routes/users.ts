@@ -20,7 +20,7 @@ interface PaymentMethod {
   id: number;
   user_id: number;
   cardType: string;
-  lastFour: string;
+  cardNumber: string;
   expiryMonth: number;
   expiryYear: number;
   cardholderName: string;
@@ -326,7 +326,13 @@ router.delete('/profile/avatar', authMiddleware, async (req: Request, res: Respo
 router.get('/profile/payment-methods', authMiddleware, async (req: Request, res: Response) => {
   try {
     const methods = await getAll<PaymentMethod>(
-      'SELECT * FROM payment_methods WHERE user_id = ? ORDER BY isDefault DESC, createdAt DESC',
+      `SELECT id, user_id, cardType,
+              COALESCE(NULLIF(cardNumber, ''), lastFour) AS cardNumber,
+              expiryMonth, expiryYear, cardholderName, isDefault,
+              billingAddress, billingCity, billingProvince, billingPostalCode, billingCountry, createdAt
+       FROM payment_methods
+       WHERE user_id = ?
+       ORDER BY isDefault DESC, createdAt DESC`,
       [req.user!.userId]
     );
     res.json({ success: true, paymentMethods: methods });
@@ -355,7 +361,7 @@ router.get('/profile/payment-methods', authMiddleware, async (req: Request, res:
  *             properties:
  *               cardType:
  *                 type: string
- *               lastFour:
+ *               cardNumber:
  *                 type: string
  *               expiryMonth:
  *                 type: integer
@@ -383,12 +389,19 @@ router.post('/profile/payment-methods', authMiddleware, async (req: Request, res
   try {
     const userId = req.user!.userId;
     const {
-      cardType, lastFour, expiryMonth, expiryYear, cardholderName,
+      cardType, cardNumber, expiryMonth, expiryYear, cardholderName,
       isDefault, billingAddress, billingCity, billingProvince, billingPostalCode, billingCountry
     } = req.body;
 
-    if (!cardType || !lastFour || !expiryMonth || !expiryYear || !cardholderName) {
-      return res.status(400).json({ success: false, message: 'Card type, last four digits, expiry, and cardholder name are required' });
+    const sanitizedCardNumber = String(cardNumber || '').replace(/\D/g, '');
+    const lastFour = sanitizedCardNumber.slice(-4);
+
+    if (!cardType || !sanitizedCardNumber || !expiryMonth || !expiryYear || !cardholderName) {
+      return res.status(400).json({ success: false, message: 'Card type, card number, expiry, and cardholder name are required' });
+    }
+
+    if (!/^\d{12,19}$/.test(sanitizedCardNumber)) {
+      return res.status(400).json({ success: false, message: 'Card number must be between 12 and 19 digits' });
     }
 
     // If this card is set as default, un-default all others
@@ -401,13 +414,21 @@ router.post('/profile/payment-methods', authMiddleware, async (req: Request, res
     const makeDefault = existingCards.length === 0 ? 1 : (isDefault ? 1 : 0);
 
     const id = await runInsert(
-      `INSERT INTO payment_methods (user_id, cardType, lastFour, expiryMonth, expiryYear, cardholderName, isDefault, billingAddress, billingCity, billingProvince, billingPostalCode, billingCountry)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, cardType, lastFour, expiryMonth, expiryYear, cardholderName, makeDefault,
+      `INSERT INTO payment_methods (user_id, cardType, cardNumber, lastFour, expiryMonth, expiryYear, cardholderName, isDefault, billingAddress, billingCity, billingProvince, billingPostalCode, billingCountry)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, cardType, sanitizedCardNumber, lastFour, expiryMonth, expiryYear, cardholderName, makeDefault,
        billingAddress || '', billingCity || '', billingProvince || '', billingPostalCode || '', billingCountry || '']
     );
 
-    const newMethod = await getOne<PaymentMethod>('SELECT * FROM payment_methods WHERE id = ?', [id]);
+    const newMethod = await getOne<PaymentMethod>(
+      `SELECT id, user_id, cardType,
+              COALESCE(NULLIF(cardNumber, ''), lastFour) AS cardNumber,
+              expiryMonth, expiryYear, cardholderName, isDefault,
+              billingAddress, billingCity, billingProvince, billingPostalCode, billingCountry, createdAt
+       FROM payment_methods
+       WHERE id = ?`,
+      [id]
+    );
 
     res.status(201).json({ success: true, message: 'Payment method added successfully', paymentMethod: newMethod });
   } catch (error) {

@@ -65,6 +65,10 @@ export default function ProfileListings() {
     setEditingListing(null);
   };
 
+  const handleListingSaved = async () => {
+    await fetchListings();
+  };
+
   const handleEndAuction = (listingId: number) => {
     setEndAuctionError(null);
     setEndingListingId(listingId);
@@ -355,7 +359,7 @@ export default function ProfileListings() {
 
       {/* Create/Edit Listing Modal */}
       {showCreateModal && (
-        <CreateListingModal onClose={handleCloseModal} editingListing={editingListing} />
+        <CreateListingModal onClose={handleCloseModal} onSuccess={handleListingSaved} editingListing={editingListing} />
       )}
 
       {/* End Auction Confirmation Modal */}

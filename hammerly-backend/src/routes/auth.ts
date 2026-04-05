@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { getOne, getAll, runQuery } from '../db/database.js';
+import { getOne, getAll, runInsert } from '../db/database.js';
 import { hashPassword, comparePassword, generateToken } from '../utils/auth.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
+const DEFAULT_AVATAR_IMAGE = '/images/user.jpg';
 
 interface User {
   id: number;
@@ -75,14 +76,25 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await hashPassword(password);
-    await runQuery(
-      'INSERT INTO users (email, password, firstName, lastName, phone) VALUES (?, ?, ?, ?, ?)',
-      [email, hashedPassword, firstName, lastName, phone]
+    const userId = await runInsert(
+      'INSERT INTO users (email, password, firstName, lastName, phone, avatarImage) VALUES (?, ?, ?, ?, ?, ?)',
+      [email, hashedPassword, firstName, lastName, phone, DEFAULT_AVATAR_IMAGE]
     );
+
+    const token = generateToken(userId, email);
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
+      token,
+      user: {
+        id: userId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        avatarImage: DEFAULT_AVATAR_IMAGE,
+      }
     });
   } catch (error) {
     console.error('Error during registration:', error);
@@ -164,7 +176,7 @@ router.post('/login', async (req: Request, res: Response) => {
         lastName: user.lastName,
         email: user.email,
         phone: (user as any).phone || '',
-        avatarImage: (user as any).avatarImage || ''
+        avatarImage: (user as any).avatarImage || DEFAULT_AVATAR_IMAGE
       }
     });
   } catch (error) {
